@@ -42,3 +42,18 @@ li:hover {
   font-size: 2em;
   color: #00ffe0;
 }
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+  body {
+    padding: 1em;
+  }
+
+  h1 {
+    font-size: 2em;
+  }
+
+  li {
+    max-width: 100%;
+  }
+}
