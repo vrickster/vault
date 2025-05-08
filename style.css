@@ -26,9 +26,19 @@ li {
   border-radius: 10px;
   max-width: 300px;
   transition: background 0.2s;
+  cursor: pointer;
 }
 
 li:hover {
   background: #2a2a2a;
-  cursor: pointer;
-  }
+}
+
+#content {
+  display: none;
+  margin-top: 2em;
+}
+
+#category-title {
+  font-size: 2em;
+  color: #00ffe0;
+}
