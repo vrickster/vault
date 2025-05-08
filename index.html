@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Vrickster Vault</title>
+  <title>Pirate Vault</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <script>
-if(prompt("Password?")!=="alphaco2")document.write("Access Denied");
-else document.write(`
-  <h1>Pirate Vault</h1>
+  if (prompt("Password?") !== "alphaco2") {
+    document.write("Access Denied");
+  } else {
+</script>
+
+  <h1>Vrickster Vault</h1>
   <ul>
     <li onclick="showContent('movies')">Movies and TV Shows</li>
     <li onclick="showContent('anime')">Animes</li>
@@ -18,8 +21,10 @@ else document.write(`
     <h2 id="category-title"></h2>
     <p id="category-description"></p>
   </div>
-  <script src="app.js"></script>
-`);
+
+<script>
+  }
 </script>
+<script src="app.js"></script>
 </body>
 </html>
