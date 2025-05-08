@@ -8,9 +8,26 @@ body {
 }
 
 h1 {
-  font-size: 2.5em;
-  margin-bottom: 0.5em;
+  font-size: 2em;
+  margin-bottom: 1em;
   color: #00ffe0;
+}
+
+#login input {
+  padding: 0.5em;
+  font-size: 1em;
+  border: none;
+  border-radius: 5px;
+  margin-right: 0.5em;
+}
+
+#login button {
+  padding: 0.5em 1em;
+  font-size: 1em;
+  background-color: #00ffe0;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
 ul {
@@ -41,19 +58,4 @@ li:hover {
 #category-title {
   font-size: 2em;
   color: #00ffe0;
-}
-
-/* Mobile responsiveness */
-@media (max-width: 600px) {
-  body {
-    padding: 1em;
-  }
-
-  h1 {
-    font-size: 2em;
-  }
-
-  li {
-    max-width: 100%;
-  }
 }
