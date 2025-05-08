@@ -7,10 +7,15 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <noscript><h1>Enable JavaScript to use this site.</h1></noscript>
+
+  <h1>Access the Pirate Vault</h1>
+  <div id="login">
+    <input type="password" id="password-input" placeholder="Enter password">
+    <button onclick="checkPassword()">Enter</button>
+    <p id="error" style="color: red;"></p>
+  </div>
 
   <div id="main-content" style="display: none;">
-    <h1>Pirate Vault</h1>
     <ul>
       <li onclick="showContent('movies')">Movies and TV Shows</li>
       <li onclick="showContent('anime')">Animes</li>
@@ -22,6 +27,6 @@
     </div>
   </div>
 
-  <script src="./app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
