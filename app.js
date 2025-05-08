@@ -1,10 +1,10 @@
 function checkPassword() {
-  const input = document.getElementById("password-input").value;
+  const input = document.getElementById('password-input').value;
   if (input === "alphaco2") {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("main-content").style.display = "block";
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
   } else {
-    document.getElementById("error").textContent = "Wrong password!";
+    alert("Access Denied");
   }
 }
 
