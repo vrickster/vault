@@ -1,3 +1,25 @@
+// Prompt for password
+let password = prompt("Enter password:");
+
+if (password !== "alphaco2") {
+  document.body.innerHTML = "<h1>Access Denied</h1>";
+} else {
+  // Create content if password is correct
+  document.body.innerHTML = `
+    <h1>Pirate Vault</h1>
+    <ul>
+      <li onclick="showContent('movies')">Movies and TV Shows</li>
+      <li onclick="showContent('anime')">Animes</li>
+      <li onclick="showContent('manga')">Manga</li>
+    </ul>
+    <div id="content">
+      <h2 id="category-title"></h2>
+      <p id="category-description"></p>
+    </div>
+  `;
+}
+
+// Function to show content based on category selection
 function showContent(category) {
   const title = document.getElementById('category-title');
   const description = document.getElementById('category-description');
