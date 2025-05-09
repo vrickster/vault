@@ -17,7 +17,7 @@
 <body>
   <header>
     <div class="logo">Vrickster Vault</div>
-    <div class="header-controls" style="display: none;">
+    <div class="header-controls">
       <div class="search-toggle">
         <i class="fas fa-search"></i>
       </div>
@@ -25,15 +25,7 @@
   </header>
   
   <div class="container">
-    <div id="login" class="fadeIn">
-      <h2>Access Your Entertainment</h2>
-      <div class="form-group">
-        <input type="password" id="password-input" placeholder="Enter password" autocomplete="off">
-      </div>
-      <button onclick="checkPassword()">Enter Vault <i class="fas fa-arrow-right"></i></button>
-    </div>
-    
-    <div id="main-content" style="display: none;">
+    <div id="main-content" class="fadeIn">
       <h1>Welcome to Vrickster Vault</h1>
       
       <div class="categories">
@@ -87,8 +79,8 @@
     </div>
   </template>
   
-  <!-- Import our scripts with the ES module type -->
+  <!-- Import our scripts -->
   <script src="api.js"></script>
   <script src="app.js"></script>
 </body>
-            </html>
+</html>
