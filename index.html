@@ -6,10 +6,22 @@
   <title>Vrickster Vault</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Plyr.js for video playback -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.js"></script>
+  
+  <!-- WebTorrent for P2P streaming (optional) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/webtorrent/1.9.7/webtorrent.min.js"></script>
 </head>
 <body>
   <header>
     <div class="logo">Vrickster Vault</div>
+    <div class="header-controls" style="display: none;">
+      <div class="search-toggle">
+        <i class="fas fa-search"></i>
+      </div>
+    </div>
   </header>
   
   <div class="container">
@@ -47,7 +59,7 @@
         </div>
       </div>
       
-      <div id="content" class="fadeIn">
+      <div id="content" style="display: none;" class="fadeIn">
         <h2 id="category-title"></h2>
         <p id="category-description"></p>
         
@@ -58,6 +70,25 @@
     </div>
   </div>
   
-  <script src="app.js"></script>
+  <!-- Modal templates -->
+  <template id="loading-template">
+    <div class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+  </template>
+  
+  <template id="error-template">
+    <div class="error-overlay">
+      <div class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>{{message}}</p>
+        <button class="retry-button">Retry</button>
+      </div>
+    </div>
+  </template>
+  
+  <!-- Import our scripts with the ES module type -->
+  <script type="module" src="api.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
             </html>
