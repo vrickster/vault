@@ -1,6 +1,3 @@
-// Import our API module
-import api from './api.js';
-
 // Password verification
 function checkPassword() {
   const input = document.getElementById('password-input').value;
