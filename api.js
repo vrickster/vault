@@ -652,14 +652,13 @@ const playerAPI = {
   }
 };
 
-// Export all API functions
-export default {
+// global api
+window.api = {
   anime: animeAPI,
   movies: moviesAPI,
   manga: mangaAPI,
   search: searchAPI,
   player: playerAPI,
-  // Helper method to get API for a specific category
   getAPI(category) {
     switch(category.toLowerCase()) {
       case 'anime': return animeAPI;
