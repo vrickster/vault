@@ -1,28 +1,3 @@
-// Password verification
-function checkPassword() {
-  const input = document.getElementById('password-input').value;
-  if (input === "alphaco2") {
-    document.getElementById('login').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
-    
-    // Add animation class
-    document.getElementById('main-content').classList.add('fadeIn');
-    
-    // Load initial trending content for each category
-    initializeContent();
-  } else {
-    alert("Access Denied");
-    document.getElementById('password-input').value = '';
-  }
-}
-
-// Handle Enter key press for password input
-document.getElementById('password-input').addEventListener('keydown', function(event) {
-  if (event.key === 'Enter') {
-    checkPassword();
-  }
-});
-
 // Loading and error state management
 function showLoadingState() {
   const loadingOverlay = document.createElement('div');
