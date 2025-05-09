@@ -5,24 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vrickster Vault</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-  <h1>Vrickster Vault</h1>
-  <div id="login">
-    <input type="password" id="password-input" placeholder="Enter password">
-    <button onclick="checkPassword()">Enter</button>
-  </div>
-  <div id="main-content" style="display: none;">
-    <ul>
-      <li onclick="showContent('movies')">Movies and TV Shows</li>
-      <li onclick="showContent('anime')">Animes</li>
-      <li onclick="showContent('manga')">Manga</li>
-    </ul>
-    <div id="content">
-      <h2 id="category-title"></h2>
-      <p id="category-description"></p>
+  <header>
+    <div class="logo">Vrickster Vault</div>
+  </header>
+  
+  <div class="container">
+    <div id="login" class="fadeIn">
+      <h2>Access Your Entertainment</h2>
+      <div class="form-group">
+        <input type="password" id="password-input" placeholder="Enter password" autocomplete="off">
+      </div>
+      <button onclick="checkPassword()">Enter Vault <i class="fas fa-arrow-right"></i></button>
+    </div>
+    
+    <div id="main-content" style="display: none;">
+      <h1>Welcome to Vrickster Vault</h1>
+      
+      <div class="categories">
+        <div class="category-card" onclick="showContent('movies')">
+          <div class="category-image">
+            <img src="/api/placeholder/400/320" alt="Movies and TV Shows">
+          </div>
+          <div class="category-title">Movies & TV Shows</div>
+        </div>
+        
+        <div class="category-card" onclick="showContent('anime')">
+          <div class="category-image">
+            <img src="/api/placeholder/400/320" alt="Anime">
+          </div>
+          <div class="category-title">Anime</div>
+        </div>
+        
+        <div class="category-card" onclick="showContent('manga')">
+          <div class="category-image">
+            <img src="/api/placeholder/400/320" alt="Manga">
+          </div>
+          <div class="category-title">Manga</div>
+        </div>
+      </div>
+      
+      <div id="content" class="fadeIn">
+        <h2 id="category-title"></h2>
+        <p id="category-description"></p>
+        
+        <div class="content-grid" id="content-items">
+          <!-- Content items will be loaded dynamically -->
+        </div>
+      </div>
     </div>
   </div>
+  
   <script src="app.js"></script>
 </body>
-</html>
+            </html>
