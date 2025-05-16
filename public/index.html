@@ -15,14 +15,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/webtorrent/1.9.7/webtorrent.min.js"></script>
 </head>
 <body>
-  <header>
-    <div class="logo">OneVault</div>
-    <!-- Removed search icon from header -->
-  </header>
+  <!-- Removed header as requested -->
   
   <div class="container">
     <div id="main-content" class="fadeIn">
-      <h1>Welcome to OneVault</h1>
+      <h1>OneVault</h1>
       
       <div class="categories">
         <div class="category-card" onclick="showContent('movies')">
@@ -109,6 +106,46 @@
       
       // The rest of your existing showContent function...
       // This will be handled by your original app.js code
+      
+      // Show content section
+      document.getElementById('content').style.display = 'block';
+      
+      // Update category title and description
+      const titleElement = document.getElementById('category-title');
+      const descriptionElement = document.getElementById('category-description');
+      
+      switch(category) {
+        case 'movies':
+          titleElement.textContent = 'Movies & TV Shows';
+          descriptionElement.textContent = 'Explore your favorite movies and TV series.';
+          break;
+        case 'anime':
+          titleElement.textContent = 'Anime';
+          descriptionElement.textContent = 'Discover popular and classic anime series.';
+          break;
+        case 'manga':
+          titleElement.textContent = 'Manga';
+          descriptionElement.textContent = 'Read your favorite manga titles.';
+          break;
+      }
+      
+      // This would typically make an API call to load content
+      loadContent(category);
+    }
+    
+    // Function to simulate content loading - replace with actual API calls
+    function loadContent(category) {
+      const topPerformersGrid = document.getElementById('top-performers-grid');
+      const contentItems = document.getElementById('content-items');
+      
+      // Clear previous content
+      topPerformersGrid.innerHTML = '';
+      contentItems.innerHTML = '';
+      
+      // Here you would typically make API calls to load actual content
+      // For now we'll just add a loading message
+      contentItems.innerHTML = '<div class="loading">Loading content...</div>';
+      topPerformersGrid.innerHTML = '<div class="loading">Loading top performers...</div>';
     }
     
     // Clear search when clicking the X
