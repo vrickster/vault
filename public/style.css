@@ -1,17 +1,26 @@
-/* Modern Streaming Platform Styling */
+/* Modern Streaming Platform Styling with Blue Glassmorphism/Neomorphism Theme */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --main-bg: #0f0f0f;
-  --card-bg: #1a1a1a;
-  --card-hover: #252525;
-  --accent: #e50914;
-  --accent-hover: #f40612;
+  /* Main colors - Blue theme */
+  --main-bg: #0f1a2a;
+  --card-bg: #1a2636;
+  --card-hover: #25303f;
+  --accent: #2c7be5;
+  --accent-hover: #1a68d4;
   --text-primary: #ffffff;
-  --text-secondary: #b3b3b3;
-  --gradient: linear-gradient(45deg, #e50914, #ff5722);
-  --overlay-bg: rgba(0, 0, 0, 0.85);
-  --modal-bg: #1a1a1a;
+  --text-secondary: #b3c5e6;
+  
+  /* Glassmorphism & Neomorphism */
+  --glass-bg: rgba(26, 38, 54, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.3);
+  --neo-shadow-light: rgba(44, 123, 229, 0.2);
+  --neo-shadow-dark: rgba(0, 0, 0, 0.5);
+  
+  --gradient: linear-gradient(45deg, #2c7be5, #4dabf7);
+  --overlay-bg: rgba(15, 26, 42, 0.9);
+  --modal-bg: #1a2636;
 }
 
 * {
@@ -41,12 +50,14 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 5%;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(15, 26, 42, 0.7);
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .logo {
@@ -69,11 +80,14 @@ header {
   font-size: 1.2rem;
   padding: 0.5rem;
   border-radius: 50%;
-  transition: background 0.3s;
+  background: rgba(44, 123, 229, 0.15);
+  color: var(--accent);
+  transition: all 0.3s;
 }
 
 .search-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(44, 123, 229, 0.3);
+  transform: scale(1.05);
 }
 
 h1 {
@@ -83,6 +97,7 @@ h1 {
   text-align: center;
   letter-spacing: 0.5px;
   color: var(--text-primary);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 h2 {
@@ -104,14 +119,17 @@ p {
   color: var(--text-secondary);
 }
 
-/* Login Form */
+/* Login Form - Glassmorphism style */
 #login {
   max-width: 450px;
   margin: 3rem auto;
-  background: var(--card-bg);
-  padding: 2rem;
-  border-radius: 8px;
+  background: var(--glass-bg);
+  padding: 2.5rem;
+  border-radius: 16px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
 }
 
 #login h2 {
@@ -128,17 +146,17 @@ p {
   width: 100%;
   padding: 0.75rem 1rem;
   font-size: 1rem;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  border-radius: 8px;
   color: var(--text-primary);
-  transition: border 0.3s, box-shadow 0.3s;
+  transition: all 0.3s;
 }
 
 #login input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
+  box-shadow: 0 0 0 3px rgba(44, 123, 229, 0.2);
 }
 
 #login button {
@@ -146,23 +164,24 @@ p {
   padding: 0.75rem;
   font-size: 1rem;
   font-weight: 600;
-  background-color: var(--accent);
+  background: var(--gradient);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.3s, transform 0.1s;
+  transition: all 0.3s;
 }
 
 #login button:hover {
-  background-color: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(44, 123, 229, 0.4);
 }
 
 #login button:active {
-  transform: scale(0.98);
+  transform: translateY(0);
 }
 
-/* Content Categories */
+/* Content Categories - Neomorphism style without images */
 .categories {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -172,43 +191,68 @@ p {
 
 .category-card {
   background: var(--card-bg);
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: all 0.3s;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  position: relative;
+  padding: 1.5rem;
+  text-align: center;
+  border: 1px solid var(--glass-border);
+  box-shadow: 
+    6px 6px 12px var(--neo-shadow-dark),
+    -6px -6px 12px var(--neo-shadow-light);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 160px;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .category-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-  background: var(--card-hover);
+  box-shadow: 
+    8px 8px 16px var(--neo-shadow-dark),
+    -8px -8px 16px var(--neo-shadow-light);
 }
 
-.category-image {
-  width: 100%;
-  height: 120px;
-  background-color: #333;
-  position: relative;
-  overflow: hidden;
-}
-
-.category-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.8;
+.category-card:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 16px;
+  background: var(--gradient);
+  opacity: 0.05;
   transition: opacity 0.3s;
 }
 
-.category-card:hover .category-image img {
-  opacity: 1;
+.category-card:hover:before {
+  opacity: 0.1;
+}
+
+.category-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--accent);
+  transition: transform 0.3s, color 0.3s;
+}
+
+.category-card:hover .category-icon {
+  transform: scale(1.1);
+  color: #4dabf7;
 }
 
 .category-title {
-  padding: 1rem;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 1.25rem;
   color: var(--text-primary);
+  position: relative;
+  z-index: 1;
 }
 
 /* Content Section */
@@ -237,22 +281,26 @@ p {
 }
 
 .content-item {
-  background: var(--card-bg);
-  border-radius: 8px;
+  background: var(--glass-bg);
+  border-radius: 12px;
   overflow: hidden;
-  transition: transform 0.3s;
+  transition: all 0.3s;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   cursor: pointer;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .content-item:hover {
-  transform: scale(1.05);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(44, 123, 229, 0.25);
 }
 
 .content-thumbnail {
   width: 100%;
   height: 140px;
-  background: #333;
+  background: #1f2e44;
   position: relative;
 }
 
@@ -269,13 +317,14 @@ p {
   transform: translate(-50%, -50%);
   width: 50px;
   height: 50px;
-  background: rgba(229, 9, 20, 0.8);
+  background: rgba(44, 123, 229, 0.8);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: all 0.3s;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .play-button:after {
@@ -290,6 +339,7 @@ p {
 
 .content-item:hover .play-button {
   opacity: 1;
+  transform: translate(-50%, -50%) scale(1.1);
 }
 
 .content-info {
@@ -311,7 +361,7 @@ p {
   font-size: 0.85rem;
 }
 
-/* Search Bar */
+/* Search Bar - Glassmorphism style */
 .search-bar {
   margin-bottom: 2rem;
   width: 100%;
@@ -320,19 +370,23 @@ p {
 .search-input-container {
   display: flex;
   align-items: center;
-  background: var(--card-bg);
-  border-radius: 8px;
-  padding: 0.5rem 1rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s;
+  background: var(--glass-bg);
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s;
 }
 
 .search-input-container:focus-within {
-  box-shadow: 0 2px 15px rgba(229, 9, 20, 0.2);
+  box-shadow: 0 4px 20px rgba(44, 123, 229, 0.25);
+  border-color: rgba(44, 123, 229, 0.3);
 }
 
 .search-input-container i {
-  color: var(--text-secondary);
+  color: var(--accent);
   margin-right: 0.75rem;
 }
 
@@ -365,8 +419,11 @@ p {
   width: 100%;
   padding: 2rem;
   text-align: center;
-  border-radius: 8px;
-  background: var(--card-bg);
+  border-radius: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
 }
 
 .loading {
@@ -387,18 +444,19 @@ p {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(15, 26, 42, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .loading-spinner {
   width: 50px;
   height: 50px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
+  border: 3px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   border-top-color: var(--accent);
   animation: spin 1s ease-in-out infinite;
@@ -419,20 +477,23 @@ p {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(15, 26, 42, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .error-message {
-  background: var(--card-bg);
+  background: var(--glass-bg);
   padding: 2rem;
-  border-radius: 8px;
+  border-radius: 12px;
   max-width: 400px;
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
 }
 
 .error-message i {
@@ -444,21 +505,22 @@ p {
 .retry-button {
   margin-top: 1rem;
   padding: 0.75rem 1.5rem;
-  background: var(--accent);
+  background: var(--gradient);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-family: 'Poppins', sans-serif;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.3s;
 }
 
 .retry-button:hover {
-  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(44, 123, 229, 0.4);
 }
 
-/* Content Modal */
+/* Content Modal - Glassmorphism style */
 .content-modal {
   position: fixed;
   top: 0;
@@ -471,6 +533,8 @@ p {
   flex-direction: column;
   overflow: hidden;
   animation: modalFadeIn 0.3s ease-out forwards;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
 }
 
 @keyframes modalFadeIn {
@@ -482,9 +546,10 @@ p {
   display: flex;
   align-items: center;
   padding: 1rem 2rem;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 26, 42, 0.8);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .modal-header h2 {
@@ -525,8 +590,8 @@ p {
 
 .content-poster img {
   width: 100%;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
 .content-info .content-meta {
@@ -537,11 +602,12 @@ p {
 }
 
 .content-info .content-meta span {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(44, 123, 229, 0.1);
   padding: 0.35rem 0.75rem;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 0.85rem;
   color: var(--text-secondary);
+  border: 1px solid rgba(44, 123, 229, 0.2);
 }
 
 .content-description {
@@ -559,7 +625,7 @@ p {
   padding-top: 2rem;
 }
 
-/* Episode/Chapter Selection */
+/* Episode/Chapter Selection - Neomorphism style */
 .episode-selection, .chapter-selection {
   margin-bottom: 2rem;
 }
@@ -576,22 +642,28 @@ p {
 .episode-item, .chapter-item {
   background: var(--card-bg);
   padding: 0.75rem;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.3s;
   font-size: 0.95rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-shadow: 
+    4px 4px 8px var(--neo-shadow-dark),
+    -4px -4px 8px var(--neo-shadow-light);
+  border: 1px solid var(--glass-border);
 }
 
 .episode-item:hover, .chapter-item:hover {
   background: var(--card-hover);
+  transform: translateY(-2px);
 }
 
 .episode-item.selected, .chapter-item.selected {
   background: var(--accent);
   color: white;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 /* Scroll styling for episode/chapter lists */
@@ -605,21 +677,22 @@ p {
 }
 
 .episodes-grid::-webkit-scrollbar-thumb, .chapters-grid::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(44, 123, 229, 0.3);
   border-radius: 3px;
 }
 
 .episodes-grid::-webkit-scrollbar-thumb:hover, .chapters-grid::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(44, 123, 229, 0.5);
 }
 
 /* Video Player */
 .video-player-container {
   width: 100%;
-  background: #000;
-  border-radius: 8px;
+  background: #0a1420;
+  border-radius: 12px;
   overflow: hidden;
   position: relative;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 .video-player-container video {
@@ -629,7 +702,7 @@ p {
 
 /* Plyr Customization */
 .plyr--video {
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -653,7 +726,7 @@ p {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #000;
+  background: #0a1420;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -664,10 +737,11 @@ p {
 .manga-reader-container {
   max-width: 800px;
   margin: 0 auto;
-  background: #000;
-  border-radius: 8px;
+  background: #0a1420;
+  border-radius: 12px;
   overflow: hidden;
   text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 .manga-page {
@@ -682,21 +756,26 @@ p {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 26, 42, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .manga-controls button {
-  background: var(--card-bg);
+  background: var(--glass-bg);
   color: var(--text-primary);
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.3s;
+  border: 1px solid var(--glass-border);
 }
 
 .manga-controls button:hover:not([disabled]) {
   background: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(44, 123, 229, 0.3);
 }
 
 .manga-controls button[disabled] {
