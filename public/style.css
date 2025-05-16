@@ -49,6 +49,21 @@ body {
   align-items: center;
 }
 
+/* FIX BEGINS HERE: Modified #main-content to maintain layout consistency */
+#main-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Ensure these sections don't affect the centering of other elements */
+#search-container, #top-performers, #content {
+  width: 100%;
+  align-self: stretch;
+}
+/* FIX ENDS HERE */
+
 h1 {
   font-size: 3.5rem;
   margin: 2rem 0;
