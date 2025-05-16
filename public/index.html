@@ -17,11 +17,7 @@
 <body>
   <header>
     <div class="logo">OneVault</div>
-    <div class="header-controls">
-      <div class="search-toggle">
-        <i class="fas fa-search"></i>
-      </div>
-    </div>
+    <!-- Removed search icon from header -->
   </header>
   
   <div class="container">
@@ -30,24 +26,43 @@
       
       <div class="categories">
         <div class="category-card" onclick="showContent('movies')">
-          <div class="category-image">
-            <img src="/api/placeholder/400/320" alt="Movies and TV Shows">
+          <div class="category-icon">
+            <i class="fas fa-film"></i>
           </div>
           <div class="category-title">Movies & TV Shows</div>
         </div>
         
         <div class="category-card" onclick="showContent('anime')">
-          <div class="category-image">
-            <img src="/api/placeholder/400/320" alt="Anime">
+          <div class="category-icon">
+            <i class="fas fa-dragon"></i>
           </div>
           <div class="category-title">Anime</div>
         </div>
         
         <div class="category-card" onclick="showContent('manga')">
-          <div class="category-image">
-            <img src="/api/placeholder/400/320" alt="Manga">
+          <div class="category-icon">
+            <i class="fas fa-book"></i>
           </div>
           <div class="category-title">Manga</div>
+        </div>
+      </div>
+      
+      <!-- Search bar that fades in after category selection -->
+      <div id="search-container" style="display: none;" class="fadeIn">
+        <div class="search-bar">
+          <div class="search-input-container">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="Search in this category...">
+            <i class="fas fa-times clear-search"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Top performers section -->
+      <div id="top-performers" style="display: none;" class="fadeIn">
+        <h2>Top Performers</h2>
+        <div class="content-grid" id="top-performers-grid">
+          <!-- Top performers will be loaded dynamically from API -->
         </div>
       </div>
       
@@ -56,7 +71,7 @@
         <p id="category-description"></p>
         
         <div class="content-grid" id="content-items">
-          <!-- Content items will be loaded dynamically -->
+          <!-- Content items will be loaded dynamically from API -->
         </div>
       </div>
     </div>
@@ -82,5 +97,25 @@
   <!-- Import our scripts -->
   <script src="api.js"></script>
   <script src="app.js"></script>
+  
+  <script>
+    // Script to handle search bar and top performers visibility
+    function showContent(category) {
+      // Show search bar
+      document.getElementById('search-container').style.display = 'block';
+      
+      // Show top performers section
+      document.getElementById('top-performers').style.display = 'block';
+      
+      // The rest of your existing showContent function...
+      // This will be handled by your original app.js code
+    }
+    
+    // Clear search when clicking the X
+    document.querySelector('.clear-search').addEventListener('click', function() {
+      document.getElementById('search-input').value = '';
+      // Trigger search update if needed
+    });
+  </script>
 </body>
-</html>
+        </html>
