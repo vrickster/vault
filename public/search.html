@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Results - OneVault</title>
+  
+  <!-- CSS files from folder structure -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/content-grid.css">
+  <link rel="stylesheet" href="css/loading-states.css">
+  <link rel="stylesheet" href="css/modal-player.css">
+  <link rel="stylesheet" href="css/search.css">
+  <link rel="stylesheet" href="css/search-page.css">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Plyr.js for video playback -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="main-content" class="fadeIn">
+      <div class="header-area">
+        <a href="index.html" class="back-button">
+          <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        <h1>OneVault</h1>
+      </div>
+      
+      <!-- Search bar -->
+      <div id="search-container" class="fadeIn">
+        <div class="search-bar">
+          <form id="search-form" action="search.html" method="get">
+            <div class="search-input-container">
+              <i class="fas fa-search"></i>
+              <input type="text" id="search-input" name="query" placeholder="Search...">
+              <input type="hidden" id="category-input" name="category" value="">
+              <i class="fas fa-times clear-search"></i>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Search results section -->
+      <div id="search-results" class="fadeIn">
+        <h2>Search Results for "<span id="search-query-display"></span>" in <span id="search-category-display"></span></h2>
+        
+        <div class="search-filters">
+          <div class="filter-group">
+            <span>Sort by:</span>
+            <select id="sort-filter" class="filter-select">
+              <option value="relevance">Relevance</option>
+              <option value="newest">Newest</option>
+              <option value="rating">Rating</option>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <span>Filter:</span>
+            <select id="type-filter" class="filter-select">
+              <option value="all">All</option>
+              <option value="movie">Movies</option>
+              <option value="tv">TV Shows</option>
+              <option value="anime">Anime</option>
+              <option value="manga">Manga</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="content-grid" id="search-results-grid">
+          <!-- Search results will be loaded dynamically -->
+          <div class="no-content">
+            <i class="fas fa-search fa-3x"></i>
+            <h3>No Results Found</h3>
+            <p>Try different keywords or browse categories from the homepage.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal templates -->
+  <template id="loading-template">
+    <div class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+  </template>
+  
+  <template id="error-template">
+    <div class="error-overlay">
+      <div class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>{{message}}</p>
+        <button class="retry-button">Retry</button>
+      </div>
+    </div>
+  </template>
+  
+  <script>
+    // Function to get URL parameters
+    function getURLParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        query: params.get('query') || '',
+        category: params.get('category') || 'all'
+      };
+    }
+    
+    // Initialize the search page
+    document.addEventListener('DOMContentLoaded', function() {
+      const params = getURLParams();
+      
+      // Set the search input value
+      document.getElementById('search-input').value = params.query;
+      document.getElementById('category-input').value = params.category;
+      
+      // Update the display elements
+      document.getElementById('search-query-display').textContent = params.query;
+      
+      // Convert category ID to display name
+      let categoryName = 'All Categories';
+      switch(params.category) {
+        case 'movies':
+          categoryName = 'Movies & TV Shows';
+          break;
+        case 'anime':
+          categoryName = 'Anime';
+          break;
+        case 'manga':
+          categoryName = 'Manga';
+          break;
+      }
+      document.getElementById('search-category-display').textContent = categoryName;
+      
+      // Set the appropriate filter based on category
+      if (params.category === 'movies') {
+        document.getElementById('type-filter').value = 'movie';
+      } else if (params.category === 'anime') {
+        document.getElementById('type-filter').value = 'anime';
+      } else if (params.category === 'manga') {
+        document.getElementById('type-filter').value = 'manga';
+      }
+      
+      // Clear search when clicking the X
+      document.querySelector('.clear-search').addEventListener('click', function() {
+        document.getElementById('search-input').value = '';
+      });
+      
+      // Handle filter changes
+      document.getElementById('sort-filter').addEventListener('change', function() {
+        // This would typically trigger a new search with the updated filter
+        console.log('Sort changed to:', this.value);
+      });
+      
+      document.getElementById('type-filter').addEventListener('change', function() {
+        // This would typically trigger a new search with the updated filter
+        console.log('Type filter changed to:', this.value);
+      });
+      
+      // In a real application, you would make an API call here to search for content
+      // searchAPI(params.query, params.category);
+    });
+    
+    // Mock function to simulate API search
+    function searchAPI(query, category) {
+      // Show loading state
+      document.getElementById('search-results-grid').innerHTML = '<div class="loading">Searching...</div>';
+      
+      // In a real application, this would be an actual API call
+      // For now, we'll just simulate an empty result after a delay
+      setTimeout(function() {
+        document.getElementById('search-results-grid').innerHTML = `
+          <div class="no-content">
+            <i class="fas fa-search fa-3x"></i>
+            <h3>No Results Found</h3>
+            <p>Try different keywords or browse categories from the homepage.</p>
+          </div>
+        `;
+      }, 1000);
+    }
+  </script>
+</body>
+    </html>
