@@ -1,0 +1,115 @@
+/* Base styles for OneVault */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap'); /* Handwritten font for logo */
+
+:root {
+  /* Main colors - Dark/Neon Green theme */
+  --main-bg: #0a0a0a;
+  --card-bg: #151515;
+  --card-hover: #1c1c1c;
+  --accent: #39ff14; /* Neon green */
+  --accent-hover: #32e011;
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  
+  /* Glassmorphism & Neomorphism */
+  --glass-bg: rgba(21, 21, 21, 0.7);
+  --glass-border: rgba(57, 255, 20, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.3);
+  --neo-shadow-light: rgba(57, 255, 20, 0.2);
+  --neo-shadow-dark: rgba(0, 0, 0, 0.5);
+  
+  --gradient: linear-gradient(45deg, #39ff14, #32e011);
+  --overlay-bg: rgba(10, 10, 10, 0.9);
+  --modal-bg: #151515;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--main-bg);
+  color: var(--text-primary);
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.6;
+}
+
+.container {
+  width: 90%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 3rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#main-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Typography */
+h1 {
+  font-size: 3.5rem;
+  margin: 2rem 0;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+  text-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+  font-family: 'Dancing Script', cursive;
+}
+
+h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+h3 {
+  font-size: 1.5rem;
+  margin: 1rem 0;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+p {
+  margin-bottom: 1.5rem;
+  color: var(--text-secondary);
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+  .container {
+    width: 95%;
+  }
+  
+  h1 {
+    font-size: 2.8rem;
+  }
+}
+
+@media (max-width: 576px) {
+  h1 {
+    font-size: 2.8rem;
+  }
+  }
