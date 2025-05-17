@@ -4,7 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OneVault</title>
-  <link rel="stylesheet" href="style.css">
+  
+  <!-- CSS files from folder structure -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/content-grid.css">
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/loading-states.css">
+  <link rel="stylesheet" href="css/modal-player.css">
+  <link rel="stylesheet" href="css/search.css">
+  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   
   <!-- Plyr.js for video playback -->
@@ -47,11 +55,14 @@
       <!-- Search bar that fades in after category selection -->
       <div id="search-container" style="display: none;" class="fadeIn">
         <div class="search-bar">
-          <div class="search-input-container">
-            <i class="fas fa-search"></i>
-            <input type="text" id="search-input" placeholder="Search in this category...">
-            <i class="fas fa-times clear-search"></i>
-          </div>
+          <form id="search-form" action="search.html" method="get">
+            <div class="search-input-container">
+              <i class="fas fa-search"></i>
+              <input type="text" id="search-input" name="query" placeholder="Search in this category...">
+              <input type="hidden" id="category-input" name="category" value="">
+              <i class="fas fa-times clear-search"></i>
+            </div>
+          </form>
         </div>
       </div>
       
@@ -101,11 +112,11 @@
       // Show search bar
       document.getElementById('search-container').style.display = 'block';
       
+      // Set the hidden category input value
+      document.getElementById('category-input').value = category;
+      
       // Show top performers section
       document.getElementById('top-performers').style.display = 'block';
-      
-      // The rest of your existing showContent function...
-      // This will be handled by your original app.js code
       
       // Show content section
       document.getElementById('content').style.display = 'block';
@@ -153,6 +164,14 @@
       document.getElementById('search-input').value = '';
       // Trigger search update if needed
     });
+    
+    // Add event listener for search form submission
+    document.getElementById('search-form').addEventListener('submit', function(event) {
+      const searchQuery = document.getElementById('search-input').value.trim();
+      if (!searchQuery) {
+        event.preventDefault(); // Prevent empty searches
+      }
+    });
   </script>
 </body>
-        </html>
+  </html>
