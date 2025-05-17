@@ -1,43 +1,46 @@
-// API Integration Module for Vrickster Vault
-// This file handles all API connections and data fetching
+// Enhanced API Integration for OneVault
+// This file handles all API connections for fetching anime, movies, and manga content
 
 // API Configuration
 const API_CONFIG = {
-  // Consumet API endpoints
+  // Main API endpoints (Consumet API as default)
   consumet: {
     base: 'https://api.consumet.org',
     anime: {
-      zoro: '/anime/zoro',
-      gogoanime: '/anime/gogoanime'
+      gogoanime: '/anime/gogoanime',
+      animepahe: '/anime/animepahe',
+      zoro: '/anime/zoro'
     },
     movies: {
-      flixhq: '/movies/flixhq'
+      flixhq: '/movies/flixhq',
+      dramacool: '/movies/dramacool'
     },
     manga: {
-      mangadex: '/manga/mangadex'
+      mangadex: '/manga/mangadex',
+      mangakakalot: '/manga/mangakakalot'
+    },
+    meta: {
+      anilist: '/meta/anilist'
     }
   },
-  // Metadata APIs
+  // Backup APIs in case main ones fail
+  backup: {
+    anime: {
+      base: 'https://api.anify.tv',
+      search: '/search',
+      info: '/info'
+    }
+  },
+  // Metadata APIs for enhanced info
   metadata: {
     tmdb: {
       base: 'https://api.themoviedb.org/3',
       key: 'YOUR_TMDB_API_KEY' // Replace with your actual API key
-    },
-    anilist: {
-      base: 'https://graphql.anilist.co',
-    }
-  },
-  // Search indexing
-  search: {
-    // Replace with your actual Meilisearch endpoint and key
-    meilisearch: {
-      base: 'https://YOUR_MEILISEARCH_INSTANCE.com',
-      key: 'YOUR_MEILISEARCH_KEY'
     }
   }
 };
 
-// Cache management
+// Improved cache management with TTL
 const cache = {
   data: {},
   set: function(key, data, expiresIn = 3600) { // Default: 1 hour cache
@@ -48,7 +51,7 @@ const cache = {
     };
     // Store in localStorage for persistence
     try {
-      localStorage.setItem('vrickster_cache_' + key, JSON.stringify(this.data[key]));
+      localStorage.setItem('onevault_cache_' + key, JSON.stringify(this.data[key]));
     } catch (e) {
       console.warn('Cache storage failed:', e);
     }
@@ -60,7 +63,7 @@ const cache = {
     // If not in memory, try localStorage
     if (!item) {
       try {
-        const storedItem = localStorage.getItem('vrickster_cache_' + key);
+        const storedItem = localStorage.getItem('onevault_cache_' + key);
         if (storedItem) {
           item = JSON.parse(storedItem);
           this.data[key] = item; // Restore to memory
@@ -80,18 +83,32 @@ const cache = {
     if (item) {
       delete this.data[key];
       try {
-        localStorage.removeItem('vrickster_cache_' + key);
+        localStorage.removeItem('onevault_cache_' + key);
       } catch (e) {
         console.warn('Cache removal failed:', e);
       }
     }
     
     return null;
+  },
+  clear: function() {
+    this.data = {};
+    // Clear localStorage cache
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('onevault_cache_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      console.warn('Cache clearing failed:', e);
+    }
   }
 };
 
-// Generic API request handler with error handling and caching
-async function apiRequest(url, options = {}, cacheKey = null, cacheTime = 3600) {
+// Improved API request handler with fallback and retry logic
+async function apiRequest(url, options = {}, cacheKey = null, cacheTime = 3600, retries = 2) {
   // Check cache first if a cacheKey is provided
   if (cacheKey) {
     const cachedData = cache.get(cacheKey);
@@ -100,83 +117,149 @@ async function apiRequest(url, options = {}, cacheKey = null, cacheTime = 3600) 
     }
   }
   
-  try {
-    // Show loading UI (handled by the UI module)
-    document.dispatchEvent(new CustomEvent('api:loading', { detail: { resource: cacheKey } }));
-    
-    // Perform the fetch
-    const response = await fetch(url, options);
-    
-    // Check if the request was successful
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+  let lastError = null;
+  
+  // Try making the request with retries
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // Show loading UI (handled by the UI module)
+      document.dispatchEvent(new CustomEvent('api:loading', { 
+        detail: { resource: cacheKey, attempt: attempt + 1 } 
+      }));
+      
+      // Add timeout to request options
+      const requestOptions = {
+        ...options,
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      };
+      
+      // Perform the fetch
+      const response = await fetch(url, requestOptions);
+      
+      // Check if the request was successful
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+      
+      // Parse the JSON response
+      const data = await response.json();
+      
+      // Cache the result if a cacheKey is provided
+      if (cacheKey) {
+        cache.set(cacheKey, data, cacheTime);
+      }
+      
+      // Notify success
+      document.dispatchEvent(new CustomEvent('api:success', { 
+        detail: { resource: cacheKey, data: data }
+      }));
+      
+      return data;
+    } catch (error) {
+      console.warn(`API request attempt ${attempt + 1} failed:`, error);
+      lastError = error;
+      
+      // If it's not the last attempt, wait a bit before retrying
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
     }
-    
-    // Parse the JSON response
-    const data = await response.json();
-    
-    // Cache the result if a cacheKey is provided
-    if (cacheKey) {
-      cache.set(cacheKey, data, cacheTime);
-    }
-    
-    // Notify success
-    document.dispatchEvent(new CustomEvent('api:success', { 
-      detail: { resource: cacheKey, data: data }
-    }));
-    
-    return data;
-  } catch (error) {
-    // Handle errors
-    console.error('API request failed:', error);
-    
-    // Notify error
-    document.dispatchEvent(new CustomEvent('api:error', { 
-      detail: { resource: cacheKey, error: error.message }
-    }));
-    
-    throw error;
   }
+  
+  // All attempts failed, notify error
+  document.dispatchEvent(new CustomEvent('api:error', { 
+    detail: { resource: cacheKey, error: lastError.message }
+  }));
+  
+  throw lastError;
 }
 
-// ANIME API FUNCTIONS
+// Enhanced Anime API with fallback providers
 const animeAPI = {
+  // Current provider (can be changed if one fails)
+  currentProvider: 'gogoanime',
+  
+  // Get provider URL
+  getProviderURL(endpoint = '') {
+    return `${API_CONFIG.consumet.base}${API_CONFIG.consumet.anime[this.currentProvider]}${endpoint}`;
+  },
+  
+  // Switch to a different provider
+  switchProvider() {
+    const providers = Object.keys(API_CONFIG.consumet.anime);
+    const currentIndex = providers.indexOf(this.currentProvider);
+    const nextIndex = (currentIndex + 1) % providers.length;
+    this.currentProvider = providers[nextIndex];
+    console.log(`Switched anime provider to ${this.currentProvider}`);
+    return this.currentProvider;
+  },
+  
+  // Get recent episodes
+  async getRecentEpisodes(page = 1) {
+    const cacheKey = `anime_recent_${page}_${this.currentProvider}`;
+    
+    try {
+      return await apiRequest(
+        `${this.getProviderURL()}/recent-episodes?page=${page}`,
+        {},
+        cacheKey,
+        1800 // Cache for 30 minutes
+      );
+    } catch (error) {
+      // Try switching provider if this one fails
+      this.switchProvider();
+      throw error;
+    }
+  },
+  
   // Get trending anime
   async getTrending(page = 1, perPage = 20) {
     const cacheKey = `anime_trending_${page}_${perPage}`;
     
-    // Use the AniList GraphQL API
-    const query = `
-      query {
-        Page(page: ${page}, perPage: ${perPage}) {
-          media(type: ANIME, sort: TRENDING_DESC) {
-            id
-            title {
-              romaji
-              english
+    try {
+      // Try using AniList for trending data
+      const query = `
+        query {
+          Page(page: ${page}, perPage: ${perPage}) {
+            media(type: ANIME, sort: TRENDING_DESC) {
+              id
+              title {
+                romaji
+                english
+                native
+              }
+              coverImage {
+                large
+                medium
+              }
+              bannerImage
+              description
+              genres
+              seasonYear
+              episodes
+              duration
+              averageScore
+              popularity
+              status
+              nextAiringEpisode {
+                episode
+                airingAt
+              }
             }
-            coverImage {
-              large
-            }
-            genres
-            seasonYear
-            episodes
-            averageScore
           }
         }
-      }
-    `;
-    
-    try {
+      `;
+      
       const data = await apiRequest(
-        API_CONFIG.metadata.anilist.base,
+        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.meta.anilist}/advanced-search`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
           },
-          body: JSON.stringify({ query })
+          body: JSON.stringify({ 
+            query: query 
+          })
         },
         cacheKey,
         3600 // Cache for 1 hour
@@ -184,26 +267,55 @@ const animeAPI = {
       
       return data.data.Page.media.map(item => ({
         id: item.id,
-        title: item.title.english || item.title.romaji,
-        image: item.coverImage.large,
+        title: item.title.english || item.title.romaji || item.title.native,
+        image: item.coverImage.large || item.coverImage.medium,
+        banner: item.bannerImage,
+        description: item.description,
         year: item.seasonYear,
-        episodes: `${item.episodes} Episodes`,
+        episodes: item.episodes,
+        duration: item.duration,
         score: item.averageScore ? `${item.averageScore}%` : 'N/A',
+        popularity: item.popularity,
+        status: item.status,
+        genres: item.genres,
+        nextEpisode: item.nextAiringEpisode,
         type: 'anime'
       }));
     } catch (error) {
       console.error('Failed to get trending anime:', error);
-      return [];
+      
+      // Fallback to backup API
+      try {
+        const backupData = await apiRequest(
+          `${API_CONFIG.backup.anime.base}/trending?type=anime&count=${perPage}`,
+          {},
+          `anime_trending_backup_${page}_${perPage}`,
+          3600
+        );
+        
+        return backupData.map(item => ({
+          id: item.id,
+          title: item.title.english || item.title.romaji || item.title.native,
+          image: item.coverImage,
+          year: item.year,
+          episodes: item.totalEpisodes || 'Unknown',
+          score: item.rating ? `${item.rating}%` : 'N/A',
+          type: 'anime'
+        }));
+      } catch (backupError) {
+        console.error('Backup API also failed:', backupError);
+        return [];
+      }
     }
   },
   
   // Search for anime
   async search(query, page = 1) {
-    const cacheKey = `anime_search_${query}_${page}`;
+    const cacheKey = `anime_search_${query}_${page}_${this.currentProvider}`;
     
     try {
       const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.anime.zoro}/search?q=${encodeURIComponent(query)}&page=${page}`,
+        `${this.getProviderURL()}/search?q=${encodeURIComponent(query)}&page=${page}`,
         {},
         cacheKey,
         1800 // Cache for 30 minutes
@@ -213,23 +325,47 @@ const animeAPI = {
         id: item.id,
         title: item.title,
         image: item.image,
-        year: item.releaseDate,
-        episodes: item.subOrDub,
+        releaseDate: item.releaseDate,
+        subOrDub: item.subOrDub,
         type: 'anime'
       }));
     } catch (error) {
       console.error('Failed to search anime:', error);
-      return [];
+      
+      // Try switching provider if this one fails
+      this.switchProvider();
+      
+      // Try one more time with new provider
+      try {
+        const data = await apiRequest(
+          `${this.getProviderURL()}/search?q=${encodeURIComponent(query)}&page=${page}`,
+          {},
+          `anime_search_${query}_${page}_${this.currentProvider}`,
+          1800
+        );
+        
+        return data.results.map(item => ({
+          id: item.id,
+          title: item.title,
+          image: item.image,
+          releaseDate: item.releaseDate,
+          subOrDub: item.subOrDub,
+          type: 'anime'
+        }));
+      } catch (retryError) {
+        console.error('Retry search failed:', retryError);
+        return [];
+      }
     }
   },
   
   // Get anime details and episodes
   async getDetails(id) {
-    const cacheKey = `anime_details_${id}`;
+    const cacheKey = `anime_details_${id}_${this.currentProvider}`;
     
     try {
       const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.anime.zoro}/info?id=${id}`,
+        `${this.getProviderURL()}/info?id=${id}`,
         {},
         cacheKey,
         7200 // Cache for 2 hours
@@ -243,48 +379,129 @@ const animeAPI = {
         description: data.description,
         genres: data.genres,
         status: data.status,
-        year: data.releaseDate,
+        releaseDate: data.releaseDate,
         episodes: data.episodes,
-        type: 'anime'
+        type: 'anime',
+        subOrDub: data.subOrDub,
+        otherNames: data.otherName,
+        totalEpisodes: data.totalEpisodes
       };
     } catch (error) {
       console.error('Failed to get anime details:', error);
-      return null;
+      
+      // Try switching provider if this one fails
+      this.switchProvider();
+      
+      // Try one more time with new provider
+      try {
+        const data = await apiRequest(
+          `${this.getProviderURL()}/info?id=${id}`,
+          {},
+          `anime_details_${id}_${this.currentProvider}`,
+          7200
+        );
+        
+        return {
+          id: data.id,
+          title: data.title,
+          image: data.image,
+          cover: data.cover || data.image,
+          description: data.description,
+          genres: data.genres,
+          status: data.status,
+          releaseDate: data.releaseDate,
+          episodes: data.episodes,
+          type: 'anime',
+          subOrDub: data.subOrDub,
+          otherNames: data.otherName,
+          totalEpisodes: data.totalEpisodes
+        };
+      } catch (retryError) {
+        console.error('Retry get details failed:', retryError);
+        return null;
+      }
     }
   },
   
   // Get streaming sources for an episode
-  async getEpisodeSources(episodeId) {
-    const cacheKey = `anime_sources_${episodeId}`;
+  async getEpisodeSources(episodeId, server = 'default') {
+    const cacheKey = `anime_sources_${episodeId}_${server}_${this.currentProvider}`;
     
     try {
       const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.anime.zoro}/watch?episodeId=${episodeId}`,
+        `${this.getProviderURL()}/watch?episodeId=${episodeId}${server !== 'default' ? `&server=${server}` : ''}`,
         {},
         cacheKey,
         900 // Cache for 15 minutes (shorter time since sources can expire)
       );
       
       return {
-        sources: data.sources,
-        subtitles: data.subtitles
+        sources: data.sources.map(source => ({
+          url: source.url,
+          isM3U8: source.isM3U8,
+          quality: source.quality
+        })),
+        subtitles: data.subtitles || []
       };
     } catch (error) {
       console.error('Failed to get episode sources:', error);
-      return { sources: [], subtitles: [] };
+      
+      // Try switching provider if this one fails
+      this.switchProvider();
+      
+      // Try one more time with new provider
+      try {
+        const data = await apiRequest(
+          `${this.getProviderURL()}/watch?episodeId=${episodeId}${server !== 'default' ? `&server=${server}` : ''}`,
+          {},
+          `anime_sources_${episodeId}_${server}_${this.currentProvider}`,
+          900
+        );
+        
+        return {
+          sources: data.sources.map(source => ({
+            url: source.url,
+            isM3U8: source.isM3U8,
+            quality: source.quality
+          })),
+          subtitles: data.subtitles || []
+        };
+      } catch (retryError) {
+        console.error('Retry get sources failed:', retryError);
+        return { sources: [], subtitles: [] };
+      }
     }
   }
 };
 
-// MOVIES & TV SHOWS API FUNCTIONS
+// Enhanced Movies & TV Shows API with fallback providers
 const moviesAPI = {
+  // Current provider
+  currentProvider: 'flixhq',
+  
+  // Get provider URL
+  getProviderURL(endpoint = '') {
+    return `${API_CONFIG.consumet.base}${API_CONFIG.consumet.movies[this.currentProvider]}${endpoint}`;
+  },
+  
+  // Switch to a different provider
+  switchProvider() {
+    const providers = Object.keys(API_CONFIG.consumet.movies);
+    const currentIndex = providers.indexOf(this.currentProvider);
+    const nextIndex = (currentIndex + 1) % providers.length;
+    this.currentProvider = providers[nextIndex];
+    console.log(`Switched movies provider to ${this.currentProvider}`);
+    return this.currentProvider;
+  },
+  
   // Get trending/popular movies
   async getTrending(page = 1) {
-    const cacheKey = `movies_trending_${page}`;
+    const cacheKey = `movies_trending_${page}_${this.currentProvider}`;
     
     try {
+      // Try using FlixHQ's home page
       const data = await apiRequest(
-        `${API_CONFIG.metadata.tmdb.base}/trending/all/week?api_key=${API_CONFIG.metadata.tmdb.key}&page=${page}`,
+        `${this.getProviderURL()}/home?page=${page}`,
         {},
         cacheKey,
         3600 // Cache for 1 hour
@@ -292,26 +509,78 @@ const moviesAPI = {
       
       return data.results.map(item => ({
         id: item.id,
-        title: item.title || item.name,
-        image: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
-        year: (item.release_date || item.first_air_date || '').substring(0, 4),
-        rating: `${Math.round(item.vote_average * 10)}%`,
-        mediaType: item.media_type, // 'movie' or 'tv'
-        type: 'movie'
+        title: item.title,
+        image: item.image,
+        type: item.type,
+        releaseDate: item.releaseDate,
+        genres: item.genres || [],
+        duration: item.duration || 'Unknown',
+        rating: item.rating || 'N/A'
       }));
     } catch (error) {
       console.error('Failed to get trending movies/shows:', error);
-      return [];
+      
+      // Fallback to TMDB API if available
+      if (API_CONFIG.metadata.tmdb.key !== 'YOUR_TMDB_API_KEY') {
+        try {
+          const data = await apiRequest(
+            `${API_CONFIG.metadata.tmdb.base}/trending/all/week?api_key=${API_CONFIG.metadata.tmdb.key}&page=${page}`,
+            {},
+            `movies_trending_tmdb_${page}`,
+            3600
+          );
+          
+          return data.results.map(item => ({
+            id: item.id.toString(),
+            title: item.title || item.name,
+            image: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
+            releaseDate: (item.release_date || item.first_air_date || '').substring(0, 4),
+            rating: `${Math.round(item.vote_average * 10)}%`,
+            type: item.media_type === 'movie' ? 'Movie' : 'TV Series',
+            overview: item.overview
+          }));
+        } catch (tmdbError) {
+          console.error('TMDB API also failed:', tmdbError);
+          return [];
+        }
+      }
+      
+      // Try switching provider if this one fails
+      this.switchProvider();
+      
+      // Try one more time with new provider
+      try {
+        const data = await apiRequest(
+          `${this.getProviderURL()}/home?page=${page}`,
+          {},
+          `movies_trending_${page}_${this.currentProvider}`,
+          3600
+        );
+        
+        return data.results.map(item => ({
+          id: item.id,
+          title: item.title,
+          image: item.image,
+          type: item.type,
+          releaseDate: item.releaseDate,
+          genres: item.genres || [],
+          duration: item.duration || 'Unknown',
+          rating: item.rating || 'N/A'
+        }));
+      } catch (retryError) {
+        console.error('Retry trending failed:', retryError);
+        return [];
+      }
     }
   },
   
-  // Search for movies/shows using FlixHQ
+  // Search for movies/shows
   async search(query, page = 1) {
-    const cacheKey = `movies_search_${query}_${page}`;
+    const cacheKey = `movies_search_${query}_${page}_${this.currentProvider}`;
     
     try {
       const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.movies.flixhq}/search?q=${encodeURIComponent(query)}&page=${page}`,
+        `${this.getProviderURL()}/search?q=${encodeURIComponent(query)}&page=${page}`,
         {},
         cacheKey,
         1800 // Cache for 30 minutes
@@ -321,22 +590,45 @@ const moviesAPI = {
         id: item.id,
         title: item.title,
         image: item.image,
-        year: item.releaseDate,
+        releaseDate: item.releaseDate,
         type: item.type // 'Movie' or 'TV Series'
       }));
     } catch (error) {
       console.error('Failed to search movies/shows:', error);
-      return [];
+      
+      // Try switching provider if this one fails
+      this.switchProvider();
+      
+      // Try one more time with new provider
+      try {
+        const data = await apiRequest(
+          `${this.getProviderURL()}/search?q=${encodeURIComponent(query)}&page=${page}`,
+          {},
+          `movies_search_${query}_${page}_${this.currentProvider}`,
+          1800
+        );
+        
+        return data.results.map(item => ({
+          id: item.id,
+          title: item.title,
+          image: item.image,
+          releaseDate: item.releaseDate,
+          type: item.type // 'Movie' or 'TV Series'
+        }));
+      } catch (retryError) {
+        console.error('Retry search failed:', retryError);
+        return [];
+      }
     }
   },
   
   // Get details for a movie/show
-  async getDetails(id, type = 'movie') {
-    const cacheKey = `movies_details_${id}_${type}`;
+  async getDetails(id) {
+    const cacheKey = `movies_details_${id}_${this.currentProvider}`;
     
     try {
       const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.movies.flixhq}/info?id=${id}`,
+        `${this.getProviderURL()}/info?id=${id}`,
         {},
         cacheKey,
         7200 // Cache for 2 hours
@@ -350,323 +642,45 @@ const moviesAPI = {
         description: data.description,
         genres: data.genres,
         status: data.status,
-        year: data.releaseDate,
+        releaseDate: data.releaseDate,
         duration: data.duration,
         rating: data.rating,
+        production: data.production,
+        casts: data.casts,
+        tags: data.tags,
         episodes: data.episodes || [],
-        type: data.type.toLowerCase()
+        type: data.type, // 'Movie' or 'TV Series'
+        recommendations: data.recommendations
       };
     } catch (error) {
       console.error('Failed to get movie/show details:', error);
-      return null;
-    }
-  },
-  
-  // Get streaming sources for a movie or episode
-  async getStreamingSources(episodeId, mediaId, server = 'upcloud') {
-    const cacheKey = `movies_sources_${episodeId}_${mediaId}_${server}`;
-    
-    try {
-      const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.movies.flixhq}/watch?episodeId=${episodeId}&mediaId=${mediaId}&server=${server}`,
-        {},
-        cacheKey,
-        900 // Cache for 15 minutes (shorter time since sources can expire)
-      );
       
-      return {
-        sources: data.sources,
-        subtitles: data.subtitles
-      };
-    } catch (error) {
-      console.error('Failed to get streaming sources:', error);
-      return { sources: [], subtitles: [] };
-    }
-  }
-};
-
-// MANGA API FUNCTIONS
-const mangaAPI = {
-  // Get trending manga
-  async getTrending(page = 1) {
-    const cacheKey = `manga_trending_${page}`;
-    
-    try {
-      const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.manga.mangadex}/trending?page=${page}`,
-        {},
-        cacheKey,
-        3600 // Cache for 1 hour
-      );
+      // Try switching provider if this one fails
+      this.switchProvider();
       
-      return data.results.map(item => ({
-        id: item.id,
-        title: item.title,
-        image: item.image,
-        description: item.description,
-        status: item.status,
-        type: 'manga'
-      }));
-    } catch (error) {
-      console.error('Failed to get trending manga:', error);
-      return [];
-    }
-  },
-  
-  // Search for manga
-  async search(query, page = 1) {
-    const cacheKey = `manga_search_${query}_${page}`;
-    
-    try {
-      const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.manga.mangadex}/search?q=${encodeURIComponent(query)}&page=${page}`,
-        {},
-        cacheKey,
-        1800 // Cache for 30 minutes
-      );
-      
-      return data.results.map(item => ({
-        id: item.id,
-        title: item.title,
-        image: item.image,
-        description: item.description,
-        status: item.status,
-        type: 'manga'
-      }));
-    } catch (error) {
-      console.error('Failed to search manga:', error);
-      return [];
-    }
-  },
-  
-  // Get manga details and chapters
-  async getDetails(id) {
-    const cacheKey = `manga_details_${id}`;
-    
-    try {
-      const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.manga.mangadex}/info/${id}`,
-        {},
-        cacheKey,
-        7200 // Cache for 2 hours
-      );
-      
-      return {
-        id: data.id,
-        title: data.title,
-        image: data.image,
-        description: data.description,
-        genres: data.genres,
-        status: data.status,
-        chapters: data.chapters,
-        type: 'manga'
-      };
-    } catch (error) {
-      console.error('Failed to get manga details:', error);
-      return null;
-    }
-  },
-  
-  // Get chapter pages
-  async getChapterPages(chapterId) {
-    const cacheKey = `manga_chapter_${chapterId}`;
-    
-    try {
-      const data = await apiRequest(
-        `${API_CONFIG.consumet.base}${API_CONFIG.consumet.manga.mangadex}/chapter/${chapterId}`,
-        {},
-        cacheKey,
-        3600 // Cache for 1 hour
-      );
-      
-      return data.pages;
-    } catch (error) {
-      console.error('Failed to get chapter pages:', error);
-      return [];
-    }
-  }
-};
-
-// SEARCH INDEXING FUNCTIONS
-const searchAPI = {
-  // Initialize Meilisearch client (if using external search)
-  // This is a placeholder - in production, you'd use the MeiliSearch JS client
-  async initMeilisearch() {
-    console.log('Initializing Meilisearch...');
-    // In a real implementation, you would import and initialize the Meilisearch client here
-  },
-  
-  // Search across all content types
-  async searchAll(query, page = 1) {
-    // This is a simple implementation that aggregates results from different APIs
-    // In production, you'd use a proper search index like Meilisearch
-    
-    try {
-      // Search in parallel for better performance
-      const [animeResults, movieResults, mangaResults] = await Promise.all([
-        animeAPI.search(query, page),
-        moviesAPI.search(query, page),
-        mangaAPI.search(query, page)
-      ]);
-      
-      // Combine and sort results (basic implementation)
-      return {
-        anime: animeResults.slice(0, 5),  // Limit to top 5 of each category
-        movies: movieResults.slice(0, 5),
-        manga: mangaResults.slice(0, 5),
-        // Add a combined array for UI that needs a single list
-        all: [
-          ...animeResults.slice(0, 5).map(item => ({...item, category: 'anime'})),
-          ...movieResults.slice(0, 5).map(item => ({...item, category: 'movies'})),
-          ...mangaResults.slice(0, 5).map(item => ({...item, category: 'manga'}))
-        ]
-      };
-    } catch (error) {
-      console.error('Search failed:', error);
-      return { anime: [], movies: [], manga: [], all: [] };
-    }
-  }
-};
-
-// PLAYER INTEGRATION
-const playerAPI = {
-  // Initialize video player with Plyr.js
-  initVideoPlayer(videoElement, options = {}) {
-    // Check if Plyr is available
-    if (typeof Plyr === 'undefined') {
-      console.error('Plyr.js is not loaded. Make sure to include it in your HTML.');
-      return null;
-    }
-    
-    // Default options
-    const defaultOptions = {
-      controls: [
-        'play-large', 'play', 'progress', 'current-time', 'mute', 
-        'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'
-      ],
-      autoplay: false,
-      captions: { active: true, language: 'auto', update: true }
-    };
-    
-    // Create and return the player instance
-    return new Plyr(videoElement, {...defaultOptions, ...options});
-  },
-  
-  // Set video source and subtitles
-  setVideoSource(player, sources, subtitles = []) {
-    if (!player) {
-      console.error('Player not initialized');
-      return;
-    }
-    
-    // Format sources for Plyr
-    const formattedSources = sources.map(source => ({
-      src: source.url,
-      type: source.type || 'video/mp4',
-      size: source.quality ? parseInt(source.quality) : undefined
-    }));
-    
-    // Format subtitles for Plyr
-    const formattedCaptions = subtitles.map(subtitle => ({
-      kind: 'captions',
-      label: subtitle.lang,
-      srclang: subtitle.lang.substring(0, 2).toLowerCase(),
-      src: subtitle.url,
-      default: subtitle.lang.toLowerCase().includes('english')
-    }));
-    
-    // Set the sources and tracks
-    player.source = {
-      type: 'video',
-      sources: formattedSources,
-      tracks: formattedCaptions
-    };
-  },
-  
-  // Initialize manga reader (simple implementation)
-  initMangaReader(containerElement) {
-    // This is a basic implementation
-    // For a real manga reader, you might want to use a dedicated library
-    return {
-      container: containerElement,
-      pages: [],
-      currentPage: 0,
-      
-      // Load pages
-      loadPages(pages) {
-        this.pages = pages;
-        this.currentPage = 0;
-        this.render();
-      },
-      
-      // Render current page
-      render() {
-        if (this.pages.length === 0) {
-          this.container.innerHTML = '<div class="manga-no-pages">No pages available</div>';
-          return;
-        }
+      // Try one more time with new provider
+      try {
+        const data = await apiRequest(
+          `${this.getProviderURL()}/info?id=${id}`,
+          {},
+          `movies_details_${id}_${this.currentProvider}`,
+          7200
+        );
         
-        // Clear container
-        this.container.innerHTML = '';
-        
-        // Add navigation controls
-        const controls = document.createElement('div');
-        controls.className = 'manga-controls';
-        controls.innerHTML = `
-          <button class="prev-page" ${this.currentPage === 0 ? 'disabled' : ''}>Previous</button>
-          <span class="page-indicator">${this.currentPage + 1} / ${this.pages.length}</span>
-          <button class="next-page" ${this.currentPage >= this.pages.length - 1 ? 'disabled' : ''}>Next</button>
-        `;
-        
-        // Add event listeners
-        controls.querySelector('.prev-page').addEventListener('click', () => this.prevPage());
-        controls.querySelector('.next-page').addEventListener('click', () => this.nextPage());
-        
-        // Add the current page image
-        const pageImg = document.createElement('img');
-        pageImg.src = this.pages[this.currentPage];
-        pageImg.className = 'manga-page';
-        pageImg.alt = `Page ${this.currentPage + 1}`;
-        
-        // Add to container
-        this.container.appendChild(controls);
-        this.container.appendChild(pageImg);
-      },
-      
-      // Navigate to next page
-      nextPage() {
-        if (this.currentPage < this.pages.length - 1) {
-          this.currentPage++;
-          this.render();
-        }
-      },
-      
-      // Navigate to previous page
-      prevPage() {
-        if (this.currentPage > 0) {
-          this.currentPage--;
-          this.render();
-        }
-      }
-    };
-  }
-};
-
-// global api
-window.api = {
-  anime: animeAPI,
-  movies: moviesAPI,
-  manga: mangaAPI,
-  search: searchAPI,
-  player: playerAPI,
-  getAPI(category) {
-    switch(category.toLowerCase()) {
-      case 'anime': return animeAPI;
-      case 'movies': 
-      case 'tv': 
-      case 'shows': return moviesAPI;
-      case 'manga': return mangaAPI;
-      default: return null;
-    }
-  }
-};
+        return {
+          id: data.id,
+          title: data.title,
+          image: data.image,
+          cover: data.cover || data.image,
+          description: data.description,
+          genres: data.genres,
+          status: data.status,
+          releaseDate: data.releaseDate,
+          duration: data.duration,
+          rating: data.rating,
+          production: data.production,
+          casts: data.casts,
+          tags: data.tags,
+          episodes: data.episodes || [],
+          type: data.type, // 'Movie' or 'TV Series'
+          recommendations: data.recommendations
