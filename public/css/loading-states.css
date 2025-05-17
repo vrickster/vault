@@ -1,0 +1,105 @@
+/* Loading & Error States */
+.loading, .error, .no-content {
+  width: 100%;
+  padding: 2rem;
+  text-align: center;
+  border-radius: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+}
+
+.loading {
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--accent);
+}
+
+.no-content {
+  color: var(--text-secondary);
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 10, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--accent);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-overlay.fade-out {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.error-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 10, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.error-message {
+  background: var(--glass-bg);
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+}
+
+.error-message i {
+  font-size: 3rem;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+.retry-button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--gradient);
+  color: black;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.retry-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(57, 255, 20, 0.4);
+}
