@@ -35,7 +35,7 @@ const API_CONFIG = {
   metadata: {
     tmdb: {
       base: 'https://api.themoviedb.org/3',
-      key: 'YOUR_TMDB_API_KEY' // Replace with your actual API key
+      key: 'f12eb41a7dd6599ee636b9e3c588a932' // Replace with your actual API key
     }
   }
 };
