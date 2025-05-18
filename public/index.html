@@ -71,6 +71,7 @@
         <h2>Top Performers</h2>
         <div class="content-grid" id="top-performers-grid">
           <!-- Top performers will be loaded dynamically from API -->
+          <div class="loading">Loading top performers...</div>
         </div>
       </div>
       
@@ -80,10 +81,28 @@
         
         <div class="content-grid" id="content-items">
           <!-- Content items will be loaded dynamically from API -->
+          <div class="loading">Loading content...</div>
         </div>
       </div>
     </div>
   </div>
+  
+  <!-- Content item template -->
+  <template id="content-item-template">
+    <div class="content-item">
+      <div class="content-poster">
+        <img src="" alt="Content Poster" class="poster-image">
+        <div class="content-rating"><span></span></div>
+      </div>
+      <div class="content-info">
+        <h3 class="content-title"></h3>
+        <div class="content-meta">
+          <span class="content-year"></span>
+          <span class="content-type"></span>
+        </div>
+      </div>
+    </div>
+  </template>
   
   <!-- Modal templates -->
   <template id="loading-template">
@@ -101,6 +120,16 @@
       </div>
     </div>
   </template>
+  
+  <!-- Modal for content details -->
+  <div id="content-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <div id="modal-content-details">
+        <!-- Content details will be inserted here -->
+      </div>
+    </div>
+  </div>
   
   <!-- Import our scripts -->
   <script src="api.js"></script>
@@ -140,29 +169,230 @@
           break;
       }
       
-      // This would typically make an API call to load content
+      // Load content from the API
       loadContent(category);
     }
     
-    // Function to simulate content loading - replace with actual API calls
+    // Function to load content from API
     function loadContent(category) {
       const topPerformersGrid = document.getElementById('top-performers-grid');
       const contentItems = document.getElementById('content-items');
       
-      // Clear previous content
-      topPerformersGrid.innerHTML = '';
-      contentItems.innerHTML = '';
-      
-      // Here you would typically make API calls to load actual content
-      // For now we'll just add a loading message
-      contentItems.innerHTML = '<div class="loading">Loading content...</div>';
+      // Clear previous content and show loading state
       topPerformersGrid.innerHTML = '<div class="loading">Loading top performers...</div>';
+      contentItems.innerHTML = '<div class="loading">Loading content...</div>';
+      
+      // Load top performers using the API
+      api.getTopPerformers(category)
+        .then(data => {
+          displayContentItems(data, topPerformersGrid);
+        })
+        .catch(error => {
+          topPerformersGrid.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load top performers: ${error.message}</p>
+              <button class="retry-button" onclick="loadTopPerformers('${category}')">Retry</button>
+            </div>
+          `;
+        });
+      
+      // Load category content using the API
+      api.getCategoryContent(category)
+        .then(data => {
+          displayContentItems(data, contentItems);
+        })
+        .catch(error => {
+          contentItems.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load content: ${error.message}</p>
+              <button class="retry-button" onclick="loadCategoryContent('${category}')">Retry</button>
+            </div>
+          `;
+        });
     }
+    
+    // Function to load just top performers
+    function loadTopPerformers(category) {
+      const topPerformersGrid = document.getElementById('top-performers-grid');
+      topPerformersGrid.innerHTML = '<div class="loading">Loading top performers...</div>';
+      
+      api.getTopPerformers(category)
+        .then(data => {
+          displayContentItems(data, topPerformersGrid);
+        })
+        .catch(error => {
+          topPerformersGrid.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load top performers: ${error.message}</p>
+              <button class="retry-button" onclick="loadTopPerformers('${category}')">Retry</button>
+            </div>
+          `;
+        });
+    }
+    
+    // Function to load just category content
+    function loadCategoryContent(category) {
+      const contentItems = document.getElementById('content-items');
+      contentItems.innerHTML = '<div class="loading">Loading content...</div>';
+      
+      api.getCategoryContent(category)
+        .then(data => {
+          displayContentItems(data, contentItems);
+        })
+        .catch(error => {
+          contentItems.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load content: ${error.message}</p>
+              <button class="retry-button" onclick="loadCategoryContent('${category}')">Retry</button>
+            </div>
+          `;
+        });
+    }
+    
+    // Function to display content items in a grid
+    function displayContentItems(items, container) {
+      // Clear the container
+      container.innerHTML = '';
+      
+      if (!items || items.length === 0) {
+        container.innerHTML = `
+          <div class="no-content">
+            <i class="fas fa-search fa-3x"></i>
+            <h3>No Content Found</h3>
+            <p>Try a different category or check back later.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Get the template
+      const template = document.getElementById('content-item-template');
+      
+      // For each item, create a content card
+      items.forEach(item => {
+        // Clone the template
+        const contentItem = template.content.cloneNode(true);
+        
+        // Set data attributes for modal functionality
+        const itemElement = contentItem.querySelector('.content-item');
+        itemElement.setAttribute('data-id', item.id);
+        itemElement.setAttribute('data-type', item.type);
+        itemElement.addEventListener('click', () => openContentDetails(item));
+        
+        // Set content details
+        contentItem.querySelector('.poster-image').src = item.poster || 'images/placeholder-poster.jpg';
+        contentItem.querySelector('.poster-image').alt = item.title + ' Poster';
+        
+        if (item.rating) {
+          contentItem.querySelector('.content-rating span').textContent = item.rating;
+        } else {
+          contentItem.querySelector('.content-rating').style.display = 'none';
+        }
+        
+        contentItem.querySelector('.content-title').textContent = item.title;
+        contentItem.querySelector('.content-year').textContent = item.year || 'Unknown';
+        contentItem.querySelector('.content-type').textContent = item.mediaType || item.type;
+        
+        // Add to container
+        container.appendChild(contentItem);
+      });
+    }
+    
+    // Function to open content details modal
+    function openContentDetails(item) {
+      // Get the modal
+      const modal = document.getElementById('content-modal');
+      const modalContent = document.getElementById('modal-content-details');
+      
+      // Show loading
+      modalContent.innerHTML = '<div class="loading-spinner"></div>';
+      modal.style.display = 'block';
+      
+      // Get detailed content info
+      api.getContentDetails(item.id, item.type)
+        .then(details => {
+          // Populate modal with content details
+          modalContent.innerHTML = `
+            <div class="modal-header">
+              <h2>${details.title}</h2>
+              <div class="modal-meta">
+                <span>${details.year || 'Unknown'}</span>
+                <span>${details.mediaType || details.type}</span>
+                ${details.rating ? `<span>Rating: ${details.rating}</span>` : ''}
+              </div>
+            </div>
+            <div class="modal-body">
+              <div class="modal-poster">
+                <img src="${details.poster || 'images/placeholder-poster.jpg'}" alt="${details.title} Poster">
+              </div>
+              <div class="modal-info">
+                <p>${details.overview || 'No description available.'}</p>
+                
+                ${details.genres ? `
+                <div class="modal-genres">
+                  <h3>Genres</h3>
+                  <div class="genre-tags">
+                    ${details.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
+                  </div>
+                </div>` : ''}
+                
+                ${details.cast ? `
+                <div class="modal-cast">
+                  <h3>Cast</h3>
+                  <p>${details.cast.join(', ')}</p>
+                </div>` : ''}
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button class="play-button" onclick="playContent('${details.id}', '${details.type}')">
+                <i class="fas fa-play"></i> Play
+              </button>
+              <button class="add-list-button">
+                <i class="fas fa-plus"></i> Add to List
+              </button>
+            </div>
+          `;
+        })
+        .catch(error => {
+          modalContent.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load content details: ${error.message}</p>
+              <button class="retry-button" onclick="openContentDetails(${JSON.stringify(item)})">Retry</button>
+            </div>
+          `;
+        });
+    }
+    
+    // Function to play content
+    function playContent(id, type) {
+      console.log(`Playing content: ${id} of type ${type}`);
+      // This would typically load the content into a media player
+      // For now, we'll just close the modal and log
+      document.getElementById('content-modal').style.display = 'none';
+      
+      // In a real app, you would call api.getStreamUrl(id, type) and then set up the player
+    }
+    
+    // Close the modal when clicking on X or outside the modal
+    document.querySelector('.close-modal').addEventListener('click', () => {
+      document.getElementById('content-modal').style.display = 'none';
+    });
+    
+    window.addEventListener('click', (event) => {
+      const modal = document.getElementById('content-modal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
     
     // Clear search when clicking the X
     document.querySelector('.clear-search').addEventListener('click', function() {
       document.getElementById('search-input').value = '';
-      // Trigger search update if needed
     });
     
     // Add event listener for search form submission
@@ -174,4 +404,4 @@
     });
   </script>
 </body>
-  </html>
+          </html>
