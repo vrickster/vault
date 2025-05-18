@@ -71,15 +71,28 @@
         
         <div class="content-grid" id="search-results-grid">
           <!-- Search results will be loaded dynamically -->
-          <div class="no-content">
-            <i class="fas fa-search fa-3x"></i>
-            <h3>No Results Found</h3>
-            <p>Try different keywords or browse categories from the homepage.</p>
-          </div>
+          <div class="loading">Searching...</div>
         </div>
       </div>
     </div>
   </div>
+  
+  <!-- Content item template -->
+  <template id="content-item-template">
+    <div class="content-item">
+      <div class="content-poster">
+        <img src="" alt="Content Poster" class="poster-image">
+        <div class="content-rating"><span></span></div>
+      </div>
+      <div class="content-info">
+        <h3 class="content-title"></h3>
+        <div class="content-meta">
+          <span class="content-year"></span>
+          <span class="content-type"></span>
+        </div>
+      </div>
+    </div>
+  </template>
   
   <!-- Modal templates -->
   <template id="loading-template">
@@ -98,14 +111,186 @@
     </div>
   </template>
   
+  <!-- Modal for content details -->
+  <div id="content-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <div id="modal-content-details">
+        <!-- Content details will be inserted here -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Import our scripts -->
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  
   <script>
     // Function to get URL parameters
     function getURLParams() {
       const params = new URLSearchParams(window.location.search);
       return {
         query: params.get('query') || '',
-        category: params.get('category') || 'all'
+        category: params.get('category') || 'all',
+        sort: params.get('sort') || 'relevance',
+        filter: params.get('filter') || 'all'
       };
+    }
+    
+    // Function to perform search
+    function performSearch(query, category, sort, filter) {
+      const searchResultsGrid = document.getElementById('search-results-grid');
+      
+      // Show loading state
+      searchResultsGrid.innerHTML = '<div class="loading">Searching...</div>';
+      
+      // Call the API search function
+      api.searchContent(query, category, { sort, filter })
+        .then(results => {
+          displaySearchResults(results);
+        })
+        .catch(error => {
+          searchResultsGrid.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Search failed: ${error.message}</p>
+              <button class="retry-button" onclick="retrySearch()">Retry</button>
+            </div>
+          `;
+        });
+    }
+    
+    // Function to display search results
+    function displaySearchResults(results) {
+      const searchResultsGrid = document.getElementById('search-results-grid');
+      
+      // Clear previous results
+      searchResultsGrid.innerHTML = '';
+      
+      if (!results || results.length === 0) {
+        searchResultsGrid.innerHTML = `
+          <div class="no-content">
+            <i class="fas fa-search fa-3x"></i>
+            <h3>No Results Found</h3>
+            <p>Try different keywords or browse categories from the homepage.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Get the template
+      const template = document.getElementById('content-item-template');
+      
+      // For each result, create a content card
+      results.forEach(item => {
+        // Clone the template
+        const contentItem = template.content.cloneNode(true);
+        
+        // Set data attributes for modal functionality
+        const itemElement = contentItem.querySelector('.content-item');
+        itemElement.setAttribute('data-id', item.id);
+        itemElement.setAttribute('data-type', item.type);
+        itemElement.addEventListener('click', () => openContentDetails(item));
+        
+        // Set content details
+        contentItem.querySelector('.poster-image').src = item.poster || 'images/placeholder-poster.jpg';
+        contentItem.querySelector('.poster-image').alt = item.title + ' Poster';
+        
+        if (item.rating) {
+          contentItem.querySelector('.content-rating span').textContent = item.rating;
+        } else {
+          contentItem.querySelector('.content-rating').style.display = 'none';
+        }
+        
+        contentItem.querySelector('.content-title').textContent = item.title;
+        contentItem.querySelector('.content-year').textContent = item.year || 'Unknown';
+        contentItem.querySelector('.content-type').textContent = item.mediaType || item.type;
+        
+        // Add to container
+        searchResultsGrid.appendChild(contentItem);
+      });
+    }
+    
+    // Function to open content details modal
+    function openContentDetails(item) {
+      // Get the modal
+      const modal = document.getElementById('content-modal');
+      const modalContent = document.getElementById('modal-content-details');
+      
+      // Show loading
+      modalContent.innerHTML = '<div class="loading-spinner"></div>';
+      modal.style.display = 'block';
+      
+      // Get detailed content info
+      api.getContentDetails(item.id, item.type)
+        .then(details => {
+          // Populate modal with content details
+          modalContent.innerHTML = `
+            <div class="modal-header">
+              <h2>${details.title}</h2>
+              <div class="modal-meta">
+                <span>${details.year || 'Unknown'}</span>
+                <span>${details.mediaType || details.type}</span>
+                ${details.rating ? `<span>Rating: ${details.rating}</span>` : ''}
+              </div>
+            </div>
+            <div class="modal-body">
+              <div class="modal-poster">
+                <img src="${details.poster || 'images/placeholder-poster.jpg'}" alt="${details.title} Poster">
+              </div>
+              <div class="modal-info">
+                <p>${details.overview || 'No description available.'}</p>
+                
+                ${details.genres ? `
+                <div class="modal-genres">
+                  <h3>Genres</h3>
+                  <div class="genre-tags">
+                    ${details.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
+                  </div>
+                </div>` : ''}
+                
+                ${details.cast ? `
+                <div class="modal-cast">
+                  <h3>Cast</h3>
+                  <p>${details.cast.join(', ')}</p>
+                </div>` : ''}
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button class="play-button" onclick="playContent('${details.id}', '${details.type}')">
+                <i class="fas fa-play"></i> Play
+              </button>
+              <button class="add-list-button">
+                <i class="fas fa-plus"></i> Add to List
+              </button>
+            </div>
+          `;
+        })
+        .catch(error => {
+          modalContent.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load content details: ${error.message}</p>
+              <button class="retry-button" onclick="openContentDetails(${JSON.stringify(item)})">Retry</button>
+            </div>
+          `;
+        });
+    }
+    
+    // Function to play content
+    function playContent(id, type) {
+      console.log(`Playing content: ${id} of type ${type}`);
+      // This would typically load the content into a media player
+      // For now, we'll just close the modal and log
+      document.getElementById('content-modal').style.display = 'none';
+      
+      // In a real app, you would call api.getStreamUrl(id, type) and then set up the player
+    }
+    
+    // Function to retry search with current parameters
+    function retrySearch() {
+      const params = getURLParams();
+      performSearch(params.query, params.category, params.sort, params.filter);
     }
     
     // Initialize the search page
@@ -115,6 +300,8 @@
       // Set the search input value
       document.getElementById('search-input').value = params.query;
       document.getElementById('category-input').value = params.category;
+      document.getElementById('sort-filter').value = params.sort;
+      document.getElementById('type-filter').value = params.filter;
       
       // Update the display elements
       document.getElementById('search-query-display').textContent = params.query;
@@ -134,52 +321,61 @@
       }
       document.getElementById('search-category-display').textContent = categoryName;
       
-      // Set the appropriate filter based on category
-      if (params.category === 'movies') {
-        document.getElementById('type-filter').value = 'movie';
-      } else if (params.category === 'anime') {
-        document.getElementById('type-filter').value = 'anime';
-      } else if (params.category === 'manga') {
-        document.getElementById('type-filter').value = 'manga';
-      }
-      
       // Clear search when clicking the X
       document.querySelector('.clear-search').addEventListener('click', function() {
         document.getElementById('search-input').value = '';
       });
       
+      // Handle form submission
+      document.getElementById('search-form').addEventListener('submit', function(event) {
+        const query = document.getElementById('search-input').value.trim();
+        if (!query) {
+          event.preventDefault(); // Prevent empty searches
+        }
+      });
+      
       // Handle filter changes
       document.getElementById('sort-filter').addEventListener('change', function() {
-        // This would typically trigger a new search with the updated filter
-        console.log('Sort changed to:', this.value);
+        const newSort = this.value;
+        const params = getURLParams();
+        
+        // Update URL parameters
+        const url = new URL(window.location);
+        url.searchParams.set('sort', newSort);
+        window.history.pushState({}, '', url);
+        
+        // Perform search with new parameters
+        performSearch(params.query, params.category, newSort, params.filter);
       });
       
       document.getElementById('type-filter').addEventListener('change', function() {
-        // This would typically trigger a new search with the updated filter
-        console.log('Type filter changed to:', this.value);
+        const newFilter = this.value;
+        const params = getURLParams();
+        
+        // Update URL parameters
+        const url = new URL(window.location);
+        url.searchParams.set('filter', newFilter);
+        window.history.pushState({}, '', url);
+        
+        // Perform search with new parameters
+        performSearch(params.query, params.category, params.sort, newFilter);
       });
       
-      // In a real application, you would make an API call here to search for content
-      // searchAPI(params.query, params.category);
-    });
-    
-    // Mock function to simulate API search
-    function searchAPI(query, category) {
-      // Show loading state
-      document.getElementById('search-results-grid').innerHTML = '<div class="loading">Searching...</div>';
+      // Close the modal when clicking on X or outside the modal
+      document.querySelector('.close-modal').addEventListener('click', () => {
+        document.getElementById('content-modal').style.display = 'none';
+      });
       
-      // In a real application, this would be an actual API call
-      // For now, we'll just simulate an empty result after a delay
-      setTimeout(function() {
-        document.getElementById('search-results-grid').innerHTML = `
-          <div class="no-content">
-            <i class="fas fa-search fa-3x"></i>
-            <h3>No Results Found</h3>
-            <p>Try different keywords or browse categories from the homepage.</p>
-          </div>
-        `;
-      }, 1000);
-    }
+      window.addEventListener('click', (event) => {
+        const modal = document.getElementById('content-modal');
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+      
+      // Perform initial search
+      performSearch(params.query, params.category, params.sort, params.filter);
+    });
   </script>
 </body>
-    </html>
+                                          </html>
