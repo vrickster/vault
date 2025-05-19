@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manga Reader - OneVault</title>
+  
+  <!-- CSS files from folder structure -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/manga.css">
+  <link rel="stylesheet" href="css/loading-states.css">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <div id="main-content" class="fadeIn">
+      <div class="header-area">
+        <a href="#" class="back-button" id="back-button">
+          <i class="fas fa-arrow-left"></i> Back
+        </a>
+        <h1>OneVault Manga</h1>
+      </div>
+      
+      <div class="manga-reader">
+        <div class="manga-info">
+          <h2 id="manga-title">Loading manga...</h2>
+          <p id="manga-chapter">Chapter <span id="chapter-number">0</span>: <span id="chapter-title">Loading...</span></p>
+        </div>
+        
+        <div id="loading-indicator" class="loading">
+          <div class="loading-spinner"></div>
+          <p>Loading manga...</p>
+        </div>
+        
+        <div id="manga-error" class="error" style="display: none;">
+          <i class="fas fa-exclamation-circle fa-3x"></i>
+          <p>Failed to load manga. Please try again.</p>
+          <button class="retry-button" id="retry-button">Retry</button>
+        </div>
+        
+        <div id="manga-container" class="manga-page" style="display: none;">
+          <!-- Manga page will be displayed here -->
+          <img id="manga-image" src="" alt="Manga page">
+        </div>
+        
+        <div class="manga-controls">
+          <button class="manga-control-button" id="first-page">
+            <i class="fas fa-angle-double-left"></i>
+          </button>
+          <button class="manga-control-button" id="prev-page">
+            <i class="fas fa-angle-left"></i>
+          </button>
+          
+          <div class="manga-page-indicator">
+            Page <span id="current-page">1</span> of <span id="total-pages">?</span>
+          </div>
+          
+          <button class="manga-control-button" id="next-page">
+            <i class="fas fa-angle-right"></i>
+          </button>
+          <button class="manga-control-button" id="last-page">
+            <i class="fas fa-angle-double-right"></i>
+          </button>
+        </div>
+        
+        <!-- Chapter selection dropdown -->
+        <div class="chapter-selector">
+          <label for="chapter-select">Chapter:</label>
+          <select id="chapter-select" class="chapter-dropdown">
+            <option value="">Loading chapters...</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="manga-chapters-list" id="chapters-list">
+        <h3>All Chapters</h3>
+        <div id="chapters-container">
+          <!-- Chapters will be loaded dynamically -->
+          <div class="loading">Loading chapters...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Chapter template -->
+  <template id="chapter-template">
+    <div class="manga-chapter-item">
+      <div class="manga-chapter-title"></div>
+      <div class="manga-chapter-date"></div>
+    </div>
+  </template>
+  
+  <!-- Import our scripts -->
+  <script src="api.js"></script>
+  
+  <script>
+    // Global variables
+    let currentManga = {
+      id: null,
+      title: '',
+      chapter: 1,
+      page: 1,
+      totalPages: 0,
+      pages: []
+    };
+    
+    // Function to get URL parameters
+    function getURLParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        id: params.get('id') || '',
+        chapter: parseInt(params.get('chapter') || '1', 10),
+        page: parseInt(params.get('page') || '1', 10)
+      };
+    }
+    
+    // Function to initialize the manga reader
+    function initMangaReader() {
+      const params = getURLParams();
+      
+      // If no ID provided, return to home
+      if (!params.id) {
+        window.location.href = 'index.html';
+        return;
+      }
+      
+      // Set manga ID and initial chapter/page
+      currentManga.id = params.id;
+      currentManga.chapter = params.chapter;
+      currentManga.page = params.page;
+      
+      // Configure back button
+      document.getElementById('back-button').addEventListener('click', function(e) {
+        e.preventDefault();
+        window.history.back();
+      });
+      
+      // Configure page navigation buttons
+      document.getElementById('first-page').addEventListener('click', goToFirstPage);
+      document.getElementById('prev-page').addEventListener('click', goToPrevPage);
+      document.getElementById('next-page').addEventListener('click', goToNextPage);
+      document.getElementById('last-page').addEventListener('click', goToLastPage);
+      
+      // Configure chapter dropdown
+      document.getElementById('chapter-select').addEventListener('change', function() {
+        const newChapter = parseInt(this.value, 10);
+        if (newChapter && newChapter !== currentManga.chapter) {
+          changeChapter(newChapter);
+        }
+      });
+      
+      // Configure retry button
+      document.getElementById('retry-button').addEventListener('click', function() {
+        loadMangaChapter(currentManga.id, currentManga.chapter);
+      });
+      
+      // Load manga details
+      loadMangaDetails(params.id);
+      
+      // Load current chapter
+      loadMangaChapter(params.id, params.chapter, params.page);
+      
+      // Add keyboard navigation
+      document.addEventListener('keydown', function(e) {
+        switch(e.key) {
+          case 'ArrowLeft':
+            goToPrevPage();
+            break;
+          case 'ArrowRight':
+            goToNextPage();
+            break;
+          case 'Home':
+            goToFirstPage();
+            break;
+          case 'End':
+            goToLastPage();
+            break;
+        }
+      });
+    }
+    
+    // Function to load manga details
+    function loadMangaDetails(id) {
+      api.getContentDetails(id, 'manga')
+        .then(details => {
+          // Update page title
+          document.title = `${details.title} - OneVault Manga`;
+          
+          // Update manga info
+          document.getElementById('manga-title').textContent = details.title;
+          currentManga.title = details.title;
+          
+          // Load chapters list
+          loadChaptersList(id);
+        })
+        .catch(error => {
+          console.error('Error loading manga details:', error);
+          document.getElementById('manga-title').textContent = 'Manga not found';
+        });
+    }
+    
+    // Function to load chapters list
+    function loadChaptersList(id) {
+      api.getChapters(id)
+        .then(chapters => {
+          if (chapters && chapters.length > 0) {
+            const chaptersContainer = document.getElementById('chapters-container');
+            const chapterTemplate = document.getElementById('chapter-template');
+            const chapterSelect = document.getElementById('chapter-select');
+            
+            // Clear previous chapters
+            chaptersContainer.innerHTML = '';
+            chapterSelect.innerHTML = '';
+            
+            // Sort chapters (newest first)
+            chapters.sort((a, b) => b.number - a.number);
+            
+            // Add chapters to dropdown and list
+            chapters.forEach(chapter => {
+              // Add to dropdown
+              const option = document.createElement('option');
+              option.value = chapter.number;
+              option.textContent = `Chapter ${chapter.number}${chapter.title ? ': ' + chapter.title : ''}`;
+              if (chapter.number === currentManga.chapter) {
+                option.selected = true;
+              }
+              chapterSelect.appendChild(option);
+              
+              // Add to list
+              const chapterItem = chapterTemplate.content.cloneNode(true);
+              const item = chapterItem.querySelector('.manga-chapter-item');
+              
+              item.querySelector('.manga-chapter-title').textContent = 
+                `Chapter ${chapter.number}${chapter.title ? ': ' + chapter.title : ''}`;
+              
+              if (chapter.date) {
+                item.querySelector('.manga-chapter-date').textContent = formatDate(chapter.date);
+              }
+              
+              // Add click handler
+              item.addEventListener('click', function() {
+                changeChapter(chapter.number);
+              });
+              
+              // Mark current chapter
+              if (chapter.number === currentManga.chapter) {
+                item.classList.add('current-chapter');
+              }
+              
+              chaptersContainer.appendChild(chapterItem);
+            });
+          } else {
+            document.getElementById('chapters-container').innerHTML = 
+              '<div class="no-content">No chapters available</div>';
+            document.getElementById('chapter-select').innerHTML = 
+              '<option value="">No chapters available</option>';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading chapters:', error);
+          document.getElementById('chapters-container').innerHTML = 
+            '<div class="error">Failed to load chapters</div>';
+        });
+    }
+    
+    // Function to load manga chapter
+    function loadMangaChapter(id, chapter, page = 1) {
+      // Show loading, hide manga and error
+      document.getElementById('loading-indicator').style.display = 'block';
+      document.getElementById('manga-container').style.display = 'none';
+      document.getElementById('manga-error').style.display = 'none';
+      
+      // Update chapter info
+      document.getElementById('chapter-number').textContent = chapter;
+      document.getElementById('chapter-title').textContent = 'Loading...';
+      
+      api.getMangaChapter(id, chapter)
+        .then(chapterData => {
+          // Hide loading, show manga
+          document.getElementById('loading-indicator').style.display = 'none';
+          document.getElementById('manga-container').style.display = 'block';
+          
+          // Update chapter info
+          document.getElementById('chapter-title').textContent = chapterData.title || `Chapter ${chapter}`;
+          
+          // Store pages data
+          currentManga.pages = chapterData.pages;
+          currentManga.totalPages = chapterData.pages.length;
+          currentManga.page = Math.min(page, currentManga.totalPages);
+          
+          // Update page counter
+          document.getElementById('total-pages').textContent = currentManga.totalPages;
+          
+          // Display the page
+          displayPage(currentManga.page);
+          
+          // Update URL without reloading
+          updateURL();
+        })
+        .catch(error => {
+          console.error('Error loading manga chapter:', error);
+          
+          // Hide loading, show error
+          document.getElementById('loading-indicator').style.display = 'none';
+          document.getElementById('manga-error').style.display = 'block';
+          document.getElementById('chapter-title').textContent = 'Error loading chapter';
+        });
+    }
+    
+    // Function to display a specific page
+    function displayPage(pageNum) {
+      if (pageNum < 1 || pageNum > currentManga.totalPages || !currentManga.pages) {
+        return;
+      }
+      
+      // Update current page
+      currentManga.page = pageNum;
+      document.getElementById('current-page').textContent = pageNum;
+      
+      // Get page URL from pages array
+      const pageUrl = currentManga.pages[pageNum - 1];
+      
+      // Set image source
+      const mangaImage = document.getElementById('manga-image');
+      mangaImage.src = pageUrl;
+      
+      // Update URL without reloading
+      updateURL();
+      
+      // Disable/enable navigation buttons as needed
+      document.getElementById('first-page').disabled = pageNum === 1;
+      document.getElementById('prev-page').disabled = pageNum === 1;
+      document.getElementById('next-page').disabled = pageNum === currentManga.totalPages;
+      document.getElementById('last-page').disabled = pageNum === currentManga.totalPages;
+    }
+    
+    // Navigation functions
+    function goToFirstPage() {
+      displayPage(1);
+    }
+    
+    function goToPrevPage() {
+      if (currentManga.page > 1) {
+        displayPage(currentManga.page - 1);
+      }
+    }
+    
+    function goToNextPage() {
+      if (currentManga.page < currentManga.totalPages) {
+        displayPage(currentManga.page + 1);
+      }
+    }
+    
+    function goToLastPage() {
+      displayPage(currentManga.totalPages);
+    }
+    
+    // Function to change chapter
+    function changeChapter(newChapter) {
+      currentManga.chapter = newChapter;
+      loadMangaChapter(currentManga.id, newChapter, 1);
+    }
+    
+    // Function to update URL without reloading
+    function updateURL() {
+      const url = new URL(window.location);
+      url.searchParams.set('id', currentManga.id);
+      url.searchParams.set('chapter', currentManga.chapter);
+      url.searchParams.set('page', currentManga.page);
+      window.history.replaceState({}, '', url);
+    }
+    
+    // Helper function to format dates
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    }
+    
+    // Initialize the reader when DOM is loaded
+    document.addEventListener('DOMContentLoaded', initMangaReader);
+  </script>
+</body>
+  </html>
