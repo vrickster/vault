@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OneVault</title>
+  
+  <!-- CSS files from folder structure -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/content-grid.css">
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/loading-states.css">
+  <link rel="stylesheet" href="css/modal-player.css">
+  <link rel="stylesheet" href="css/search.css">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Plyr.js for video playback -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.js"></script>
+  
+  <!-- WebTorrent for P2P streaming (optional) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/webtorrent/1.9.7/webtorrent.min.js"></script>
+</head>
+<body>
+  <!-- Removed header as requested -->
+  
+  <div class="container">
+    <div id="main-content" class="fadeIn">
+      <h1>OneVault</h1>
+      
+      <div class="categories">
+        <div class="category-card" onclick="showContent('movies')">
+          <div class="category-icon">
+            <i class="fas fa-film"></i>
+          </div>
+          <div class="category-title">Movies & TV Shows</div>
+        </div>
+        
+        <div class="category-card" onclick="showContent('anime')">
+          <div class="category-icon">
+            <i class="fas fa-dragon"></i>
+          </div>
+          <div class="category-title">Anime</div>
+        </div>
+        
+        <div class="category-card" onclick="showContent('manga')">
+          <div class="category-icon">
+            <i class="fas fa-book"></i>
+          </div>
+          <div class="category-title">Manga</div>
+        </div>
+      </div>
+      
+      <!-- Search bar that fades in after category selection -->
+      <div id="search-container" style="display: none;" class="fadeIn">
+        <div class="search-bar">
+          <form id="search-form" action="search.html" method="get">
+            <div class="search-input-container">
+              <i class="fas fa-search"></i>
+              <input type="text" id="search-input" name="query" placeholder="Search in this category...">
+              <input type="hidden" id="category-input" name="category" value="">
+              <i class="fas fa-times clear-search"></i>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Top performers section -->
+      <div id="top-performers" style="display: none;" class="fadeIn">
+        <h2>Top Performers</h2>
+        <div class="content-grid" id="top-performers-grid">
+          <!-- Top performers will be loaded dynamically from API -->
+          <div class="loading">Loading top performers...</div>
+        </div>
+      </div>
+      
+      <div id="content" style="display: none;" class="fadeIn">
+        <h2 id="category-title"></h2>
+        <p id="category-description"></p>
+        
+        <div class="content-grid" id="content-items">
+          <!-- Content items will be loaded dynamically from API -->
+          <div class="loading">Loading content...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Content item template -->
+  <template id="content-item-template">
+    <div class="content-item">
+      <div class="content-poster">
+        <img src="" alt="Content Poster" class="poster-image">
+        <div class="content-rating"><span></span></div>
+      </div>
+      <div class="content-info">
+        <h3 class="content-title"></h3>
+        <div class="content-meta">
+          <span class="content-year"></span>
+          <span class="content-type"></span>
+        </div>
+      </div>
+    </div>
+  </template>
+  
+  <!-- Modal templates -->
+  <template id="loading-template">
+    <div class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+  </template>
+  
+  <template id="error-template">
+    <div class="error-overlay">
+      <div class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>{{message}}</p>
+        <button class="retry-button">Retry</button>
+      </div>
+    </div>
+  </template>
+  
+  <!-- Modal for content details -->
+  <div id="content-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <div id="modal-content-details">
+        <!-- Content details will be inserted here -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Import our scripts -->
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  
+  <script>
+    // Script to handle search bar and top performers visibility
+    function showContent(category) {
+      // Show search bar
+      document.getElementById('search-container').style.display = 'block';
+      
+      // Set the hidden category input value
+      document.getElementById('category-input').value = category;
+      
+      // Show top performers section
+      document.getElementById('top-performers').style.display = 'block';
+      
+      // Show content section
+      document.getElementById('content').style.display = 'block';
+      
+      // Update category title and description
+      const titleElement = document.getElementById('category-title');
+      const descriptionElement = document.getElementById('category-description');
+      
+      switch(category) {
+        case 'movies':
+          titleElement.textContent = 'Movies & TV Shows';
+          descriptionElement.textContent = 'Explore your favorite movies and TV series.';
+          break;
+        case 'anime':
+          titleElement.textContent = 'Anime';
+          descriptionElement.textContent = 'Discover popular and classic anime series.';
+          break;
+        case 'manga':
+          titleElement.textContent = 'Manga';
+          descriptionElement.textContent = 'Read your favorite manga titles.';
+          break;
+      }
+      
+      // Load content from the API
+      loadContent(category);
+    }
+    
+    // Function to load content from API
+    function loadContent(category) {
+      const topPerformersGrid = document.getElementById('top-performers-grid');
+      const contentItems = document.getElementById('content-items');
+      
+      // Clear previous content and show loading state
+      topPerformersGrid.innerHTML = '<div class="loading">Loading top performers...</div>';
+      contentItems.innerHTML = '<div class="loading">Loading content...</div>';
+      
+      // Load top performers using the API
+      api.getTopPerformers(category)
+        .then(data => {
+          displayContentItems(data, topPerformersGrid);
+        })
+        .catch(error => {
+          topPerformersGrid.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load top performers: ${error.message}</p>
+              <button class="retry-button" onclick="loadTopPerformers('${category}')">Retry</button>
+            </div>
+          `;
+        });
+      
+      // Load category content using the API
+      api.getCategoryContent(category)
+        .then(data => {
+          displayContentItems(data, contentItems);
+        })
+        .catch(error => {
+          contentItems.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load content: ${error.message}</p>
+              <button class="retry-button" onclick="loadCategoryContent('${category}')">Retry</button>
+            </div>
+          `;
+        });
+    }
+    
+    // Function to load just top performers
+    function loadTopPerformers(category) {
+      const topPerformersGrid = document.getElementById('top-performers-grid');
+      topPerformersGrid.innerHTML = '<div class="loading">Loading top performers...</div>';
+      
+      api.getTopPerformers(category)
+        .then(data => {
+          displayContentItems(data, topPerformersGrid);
+        })
+        .catch(error => {
+          topPerformersGrid.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load top performers: ${error.message}</p>
+              <button class="retry-button" onclick="loadTopPerformers('${category}')">Retry</button>
+            </div>
+          `;
+        });
+    }
+    
+    // Function to load just category content
+    function loadCategoryContent(category) {
+      const contentItems = document.getElementById('content-items');
+      contentItems.innerHTML = '<div class="loading">Loading content...</div>';
+      
+      api.getCategoryContent(category)
+        .then(data => {
+          displayContentItems(data, contentItems);
+        })
+        .catch(error => {
+          contentItems.innerHTML = `
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Failed to load content: ${error.message}</p>
+              <button class="retry-button" onclick="loadCategoryContent('${category}')">Retry</button>
+            </div>
+          `;
+        });
+    }
+    
+    // Function to display content items in a grid
+    function displayContentItems(items, container) {
+      // Clear the container
+      container.innerHTML = '';
+      
+      if (!items || items.length === 0) {
+        container.innerHTML = `
+          <div class="no-content">
+            <i class="fas fa-search fa-3x"></i>
+            <h3>No Content Found</h3>
+            <p>Try a different category or check back later.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Get the template
+      const template = document.getElementById('content-item-template');
+      
+      // For each item, create a content card
+      items.forEach(item => {
+        // Clone the template
+        const contentItem = template.content.cloneNode(true);
+        
+        // Set data attributes for modal functionality
+        const itemElement = contentItem.querySelector('.content-item');
+        itemElement.setAttribute('data-id', item.id);
+        itemElement.setAttribute('data-type', item.type);
+        
+        // Add click event to directly navigate to appropriate player 
+        itemElement.addEventListener('click', () => {
+          if (item.type === 'manga') {
+            // Navigate to manga reader
+            window.location.href = `mangareader.html?id=${item.id}&chapter=1&page=1`;
+          } else {
+            // Navigate to video player (for movies, TV shows, anime)
+            window.location.href = `videoplayer.html?id=${item.id}&type=${item.type}&episode=1`;
+          }
+        });
+        
+        // Set content details
+        contentItem.querySelector('.poster-image').src = item.poster || 'images/placeholder-poster.jpg';
+        contentItem.querySelector('.poster-image').alt = item.title + ' Poster';
+        
+        if (item.rating) {
+          contentItem.querySelector('.content-rating span').textContent = item.rating;
+        } else {
+          contentItem.querySelector('.content-rating').style.display = 'none';
+        }
+        
+        contentItem.querySelector('.content-title').textContent = item.title;
+        contentItem.querySelector('.content-year').textContent = item.year || 'Unknown';
+        contentItem.querySelector('.content-type').textContent = item.mediaType || item.type;
+        
+        // Add to container
+        container.appendChild(contentItem);
+      });
+    }
+    
+    // Function to open content details modal - REMOVED since we're directly navigating to player now
+    
+    // Function to play content - Now part of the videoplayer.html page
+    
+    // Close the modal when clicking on X or outside the modal
+    document.querySelector('.close-modal').addEventListener('click', () => {
+      document.getElementById('content-modal').style.display = 'none';
+    });
+    
+    window.addEventListener('click', (event) => {
+      const modal = document.getElementById('content-modal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+    
+    // Clear search when clicking the X
+    document.querySelector('.clear-search').addEventListener('click', function() {
+      document.getElementById('search-input').value = '';
+    });
+    
+    // Add event listener for search form submission
+    document.getElementById('search-form').addEventListener('submit', function(event) {
+      const searchQuery = document.getElementById('search-input').value.trim();
+      if (!searchQuery) {
+        event.preventDefault(); // Prevent empty searches
+      }
+    });
+  </script>
+</body>
+                                             </html>
