@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Player - OneVault</title>
+  
+  <!-- CSS files from folder structure -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/modal-player.css">
+  <link rel="stylesheet" href="css/loading-states.css">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Plyr.js for video playback -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.js"></script>
+  
+  <!-- WebTorrent for P2P streaming (optional) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/webtorrent/1.9.7/webtorrent.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="main-content" class="fadeIn">
+      <div class="header-area">
+        <a href="#" class="back-button" id="back-button">
+          <i class="fas fa-arrow-left"></i> Back
+        </a>
+        <h1>OneVault Player</h1>
+      </div>
+      
+      <div class="video-player-container">
+        <div id="loading-indicator" class="loading">
+          <div class="loading-spinner"></div>
+          <p>Loading video...</p>
+        </div>
+        
+        <div id="player-error" class="error" style="display: none;">
+          <i class="fas fa-exclamation-circle fa-3x"></i>
+          <p>Failed to load video. Please try again.</p>
+          <button class="retry-button" id="retry-button">Retry</button>
+        </div>
+        
+        <div id="player-wrapper" style="display: none;">
+          <video id="video-player" playsinline controls>
+            <source src="" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      </div>
+      
+      <div class="content-details">
+        <div class="content-info">
+          <h2 id="content-title">Loading content...</h2>
+          <div class="content-meta">
+            <span id="content-year"></span>
+            <span id="content-type"></span>
+            <span id="content-rating"></span>
+          </div>
+          <p id="content-description" class="content-description">Loading description...</p>
+        </div>
+      </div>
+      
+      <div class="episode-selection" id="episode-selection" style="display: none;">
+        <h3>Episodes</h3>
+        <div class="episode-list" id="episode-list">
+          <!-- Episodes will be loaded dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Episode template -->
+  <template id="episode-template">
+    <div class="episode-item">
+      <div class="episode-number"></div>
+      <div class="episode-info">
+        <div class="episode-title"></div>
+        <div class="episode-duration"></div>
+      </div>
+    </div>
+  </template>
+  
+  <!-- Import our scripts -->
+  <script src="api.js"></script>
+  
+  <script>
+    // Function to get URL parameters
+    function getURLParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        id: params.get('id') || '',
+        type: params.get('type') || '',
+        episode: params.get('episode') || '1'
+      };
+    }
+    
+    // Function to initialize the player page
+    function initPlayer() {
+      const params = getURLParams();
+      
+      // If no ID or type provided, return to home
+      if (!params.id || !params.type) {
+        window.location.href = 'index.html';
+        return;
+      }
+      
+      // Configure back button
+      document.getElementById('back-button').addEventListener('click', function(e) {
+        e.preventDefault();
+        window.history.back();
+      });
+      
+      // Load content details
+      loadContentDetails(params.id, params.type);
+      
+      // Load video data
+      loadVideo(params.id, params.type, params.episode);
+      
+      // Initialize retry button
+      document.getElementById('retry-button').addEventListener('click', function() {
+        loadVideo(params.id, params.type, params.episode);
+      });
+    }
+    
+    // Function to load content details
+    function loadContentDetails(id, type) {
+      api.getContentDetails(id, type)
+        .then(details => {
+          // Update page title
+          document.title = `${details.title} - OneVault Player`;
+          
+          // Update content info
+          document.getElementById('content-title').textContent = details.title;
+          document.getElementById('content-year').textContent = details.year || '';
+          document.getElementById('content-type').textContent = details.mediaType || details.type;
+          
+          if (details.rating) {
+            document.getElementById('content-rating').textContent = `Rating: ${details.rating}`;
+          }
+          
+          document.getElementById('content-description').textContent = details.overview || 'No description available.';
+          
+          // Load episodes if TV series or anime
+          if (type === 'tv' || type === 'anime') {
+            loadEpisodes(id, type);
+          }
+        })
+        .catch(error => {
+          console.error('Error loading content details:', error);
+          document.getElementById('content-title').textContent = 'Content not found';
+          document.getElementById('content-description').textContent = 'Failed to load content details.';
+        });
+    }
+    
+    // Function to load episodes for series
+    function loadEpisodes(id, type) {
+      api.getEpisodes(id, type)
+        .then(episodes => {
+          if (episodes && episodes.length > 0) {
+            const episodeList = document.getElementById('episode-list');
+            const episodeTemplate = document.getElementById('episode-template');
+            
+            // Show episode selection
+            document.getElementById('episode-selection').style.display = 'block';
+            
+            // Clear previous episodes
+            episodeList.innerHTML = '';
+            
+            // Get current episode from URL
+            const currentEpisode = getURLParams().episode;
+            
+            // Add episodes
+            episodes.forEach((episode, index) => {
+              const episodeItem = episodeTemplate.content.cloneNode(true);
+              
+              // Set episode data
+              episodeItem.querySelector('.episode-number').textContent = `EP ${episode.number}`;
+              episodeItem.querySelector('.episode-title').textContent = episode.title || `Episode ${episode.number}`;
+              
+              if (episode.duration) {
+                episodeItem.querySelector('.episode-duration').textContent = episode.duration;
+              }
+              
+              // Mark current episode
+              const item = episodeItem.querySelector('.episode-item');
+              if (episode.number === currentEpisode) {
+                item.classList.add('current-episode');
+              }
+              
+              // Add click handler
+              item.addEventListener('click', function() {
+                const params = getURLParams();
+                window.location.href = `videoplayer.html?id=${params.id}&type=${params.type}&episode=${episode.number}`;
+              });
+              
+              episodeList.appendChild(episodeItem);
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error loading episodes:', error);
+        });
+    }
+    
+    // Function to load and play video
+    function loadVideo(id, type, episode) {
+      // Show loading, hide player and error
+      document.getElementById('loading-indicator').style.display = 'block';
+      document.getElementById('player-wrapper').style.display = 'none';
+      document.getElementById('player-error').style.display = 'none';
+      
+      // Get stream URL
+      api.getStreamUrl(id, type, episode)
+        .then(streamData => {
+          // Hide loading, show player
+          document.getElementById('loading-indicator').style.display = 'none';
+          document.getElementById('player-wrapper').style.display = 'block';
+          
+          // Set video source
+          const player = document.getElementById('video-player');
+          player.querySelector('source').src = streamData.url;
+          player.load();
+          
+          // Initialize Plyr
+          const plyrInstance = new Plyr('#video-player', {
+            controls: [
+              'play-large', 'play', 'progress', 'current-time', 'mute', 
+              'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'
+            ],
+            autoplay: false
+          });
+          
+          // Handle WebTorrent streams if needed
+          if (streamData.type === 'torrent') {
+            initTorrentStream(streamData.magnet, player);
+          }
+        })
+        .catch(error => {
+          console.error('Error loading video:', error);
+          
+          // Hide loading, show error
+          document.getElementById('loading-indicator').style.display = 'none';
+          document.getElementById('player-error').style.display = 'block';
+        });
+    }
+    
+    // Function to initialize torrent stream (optional WebTorrent functionality)
+    function initTorrentStream(magnetUri, videoElement) {
+      const client = new WebTorrent();
+      
+      client.add(magnetUri, function (torrent) {
+        // Find the video file
+        const file = torrent.files.find(function (file) {
+          return file.name.endsWith('.mp4') || file.name.endsWith('.mkv') || file.name.endsWith('.webm');
+        });
+        
+        if (file) {
+          // Stream to video element
+          file.renderTo(videoElement);
+        }
+      });
+    }
+    
+    // Initialize the page when DOM is loaded
+    document.addEventListener('DOMContentLoaded', initPlayer);
+  </script>
+</body>
+    </html>
