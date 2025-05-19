@@ -67,6 +67,60 @@ const api = {
         type: 'movie',
         mediaType: 'Movie'
       }));
+    },
+
+    // Added to handle streaming requests
+    async getStreamingSources(movieId) {
+      // In a real app, this would fetch from a streaming API
+      // For this demo, we'll return a placeholder video
+      return {
+        sources: [
+          {
+            url: 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.mp4/.m3u8',
+            type: 'application/x-mpegURL'
+          },
+          {
+            url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            type: 'video/mp4'
+          }
+        ],
+        subtitles: [
+          {
+            lang: 'en',
+            label: 'English',
+            url: 'https://example.com/subtitles/en.vtt'
+          }
+        ]
+      };
+    },
+    
+    // Added to get TV show episodes
+    async getEpisodes(showId) {
+      // In a real implementation, fetch episode data from TMDb API
+      // For this demo, we'll return mock data
+      return [
+        {
+          id: '1',
+          number: '1',
+          title: 'Episode 1',
+          duration: '45 min',
+          description: 'The first episode'
+        },
+        {
+          id: '2',
+          number: '2',
+          title: 'Episode 2',
+          duration: '42 min',
+          description: 'The second episode'
+        },
+        {
+          id: '3',
+          number: '3',
+          title: 'Episode 3',
+          duration: '48 min',
+          description: 'The third episode'
+        }
+      ];
     }
   },
 
@@ -180,6 +234,38 @@ const api = {
         description: item.description,
         overview: item.description
       }));
+    },
+
+    // Added to get episode data
+    async getEpisodes(animeId) {
+      // For demo purposes - would normally fetch from an API
+      return Array.from({ length: 12 }, (_, i) => ({
+        id: `${i + 1}`,
+        number: `${i + 1}`,
+        title: `Episode ${i + 1}`,
+        duration: '24 min',
+        description: `Episode ${i + 1} description`
+      }));
+    },
+
+    // Added to get episode streaming sources
+    async getEpisodeSources(episodeId) {
+      // For demo purposes - would normally fetch from a streaming API
+      return {
+        sources: [
+          {
+            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+            type: 'video/mp4'
+          }
+        ],
+        subtitles: [
+          {
+            lang: 'en',
+            label: 'English',
+            url: 'https://example.com/subtitles/en.vtt'
+          }
+        ]
+      };
     }
   },
 
@@ -230,6 +316,34 @@ const api = {
       return this.manga.getDetails(id);
     }
     return null;
+  },
+
+  // Add missing functions needed by videoplayer.html
+  async getStreamUrl(id, type, episode) {
+    // For demo purposes
+    if (type === 'movie' || type === 'movies') {
+      const sources = await this.movies.getStreamingSources(id);
+      return {
+        url: sources.sources[0].url,
+        type: 'video'
+      };
+    } else if (type === 'anime') {
+      const sources = await this.anime.getEpisodeSources(episode);
+      return {
+        url: sources.sources[0].url,
+        type: 'video'
+      };
+    }
+    return null;
+  },
+
+  async getEpisodes(id, type) {
+    if (type === 'tv') {
+      return this.movies.getEpisodes(id);
+    } else if (type === 'anime') {
+      return this.anime.getEpisodes(id);
+    }
+    return [];
   },
 
   async searchContent(query, category, options = {}) {
@@ -290,15 +404,27 @@ const api = {
         controls: ['play', 'progress', 'volume', 'fullscreen']
       });
     },
-    setVideoSource(player, sources) {
+    setVideoSource(player, sources, subtitles = []) {
       if (!sources || sources.length === 0) return;
+      
+      const sourcesConfig = sources.map(src => ({
+        src: src.url,
+        type: src.type || 'video/mp4',
+        size: 720
+      }));
+      
+      const trackConfig = subtitles.map(sub => ({
+        kind: 'subtitles',
+        label: sub.label,
+        srclang: sub.lang,
+        src: sub.url,
+        default: sub.lang === 'en'
+      }));
+      
       player.source = {
         type: 'video',
-        sources: sources.map(src => ({
-          src: src.url,
-          type: src.type || 'video/mp4',
-          size: 720
-        }))
+        sources: sourcesConfig,
+        tracks: trackConfig
       };
     },
     initMangaReader(container) {
