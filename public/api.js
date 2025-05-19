@@ -69,7 +69,6 @@ const api = {
       }));
     },
 
-    // Added to handle streaming requests
     async getStreamingSources(movieId) {
       // In a real app, this would fetch from a streaming API
       // For this demo, we'll return a placeholder video
@@ -94,33 +93,40 @@ const api = {
       };
     },
     
-    // Added to get TV show episodes
+    // Updated to get real TV show episodes from TMDb API
     async getEpisodes(showId) {
-      // In a real implementation, fetch episode data from TMDb API
-      // For this demo, we'll return mock data
-      return [
-        {
-          id: '1',
-          number: '1',
-          title: 'Episode 1',
-          duration: '45 min',
-          description: 'The first episode'
-        },
-        {
-          id: '2',
-          number: '2',
-          title: 'Episode 2',
-          duration: '42 min',
-          description: 'The second episode'
-        },
-        {
-          id: '3',
-          number: '3',
-          title: 'Episode 3',
-          duration: '48 min',
-          description: 'The third episode'
+      try {
+        // First, let's get the first season data (or all seasons if needed)
+        const seasonsUrl = `${API_BASES.tmdb}/tv/${showId}/seasons?api_key=${API_KEYS.tmdb}`;
+        const seasonsRes = await fetch(seasonsUrl);
+        const seasonsData = await seasonsRes.json();
+        
+        // If no seasons available, return empty array
+        if (!seasonsData.seasons || seasonsData.seasons.length === 0) {
+          return [];
         }
-      ];
+        
+        // Get episodes for the first season (we can expand this later)
+        const firstSeason = seasonsData.seasons[0].season_number;
+        const episodesUrl = `${API_BASES.tmdb}/tv/${showId}/season/${firstSeason}?api_key=${API_KEYS.tmdb}`;
+        const episodesRes = await fetch(episodesUrl);
+        const episodesData = await episodesRes.json();
+        
+        // Map and return episode data
+        return episodesData.episodes.map(episode => ({
+          id: episode.id.toString(),
+          number: episode.episode_number.toString(),
+          season: firstSeason.toString(),
+          title: episode.name,
+          duration: `${episode.runtime || 45} min`,
+          description: episode.overview,
+          still: episode.still_path ? `https://image.tmdb.org/t/p/w300${episode.still_path}` : null,
+          airDate: episode.air_date
+        }));
+      } catch (error) {
+        console.error("Error fetching episodes:", error);
+        return [];
+      }
     }
   },
 
@@ -174,6 +180,11 @@ const api = {
             genres
             status
             episodes
+            duration
+            nextAiringEpisode {
+              episode
+              airingAt
+            }
           }
         }`,
         variables: { id: parseInt(id) }
@@ -197,7 +208,12 @@ const api = {
         status: item.status,
         type: 'anime',
         mediaType: 'Anime',
-        episodes: item.episodes
+        episodes: item.episodes,
+        duration: item.duration ? `${item.duration} min` : 'N/A',
+        nextEpisode: item.nextAiringEpisode ? {
+          number: item.nextAiringEpisode.episode,
+          airingAt: item.nextAiringEpisode.airingAt
+        } : null
       };
     },
 
@@ -236,19 +252,60 @@ const api = {
       }));
     },
 
-    // Added to get episode data
+    // Updated to get real anime episodes from AniList API
     async getEpisodes(animeId) {
-      // For demo purposes - would normally fetch from an API
-      return Array.from({ length: 12 }, (_, i) => ({
-        id: `${i + 1}`,
-        number: `${i + 1}`,
-        title: `Episode ${i + 1}`,
-        duration: '24 min',
-        description: `Episode ${i + 1} description`
-      }));
+      try {
+        // First fetch anime details to get episode count
+        const detailsBody = {
+          query: `query ($id: Int) {
+            Media(id: $id, type: ANIME) {
+              id
+              episodes
+              title { romaji }
+              duration
+            }
+          }`,
+          variables: { id: parseInt(animeId) }
+        };
+        
+        const detailsRes = await fetch(API_BASES.anilist, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(detailsBody)
+        });
+        
+        const detailsData = await detailsRes.json();
+        const animeDetails = detailsData.data.Media;
+        
+        if (!animeDetails || !animeDetails.episodes) {
+          return [];
+        }
+        
+        // Then fetch episode details if available through another API
+        // Note: AniList doesn't provide detailed episode info, so we'll construct from what we have
+        
+        // Generate episode list based on total count
+        const totalEpisodes = animeDetails.episodes;
+        const episodeDuration = animeDetails.duration || 24;
+        
+        return Array.from({ length: totalEpisodes }, (_, i) => {
+          const episodeNum = i + 1;
+          return {
+            id: `${animeId}-${episodeNum}`,
+            number: episodeNum.toString(),
+            title: `Episode ${episodeNum}`,
+            duration: `${episodeDuration} min`,
+            description: `Episode ${episodeNum} of ${animeDetails.title.romaji}`,
+            // Include placeholder image URL that could be replaced with real data
+            still: `/api/placeholder/300/170`
+          };
+        });
+      } catch (error) {
+        console.error("Error fetching anime episodes:", error);
+        return [];
+      }
     },
 
-    // Added to get episode streaming sources
     async getEpisodeSources(episodeId) {
       // For demo purposes - would normally fetch from a streaming API
       return {
@@ -310,6 +367,27 @@ const api = {
   async getContentDetails(id, type) {
     if (type === 'movie' || type === 'movies') {
       return this.movies.getDetails(id);
+    } else if (type === 'tv') {
+      // Fetch TV show details using movie API but with TV endpoint
+      const url = `${API_BASES.tmdb}/tv/${id}?api_key=${API_KEYS.tmdb}`;
+      const res = await fetch(url);
+      const item = await res.json();
+      return {
+        id: item.id.toString(),
+        title: item.name,
+        image: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
+        poster: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
+        year: item.first_air_date?.split('-')[0] || 'N/A',
+        rating: `${Math.round(item.vote_average * 10)}%`,
+        description: item.overview,
+        overview: item.overview,
+        genres: item.genres?.map(g => g.name) || [],
+        type: 'tv',
+        mediaType: 'TV Show',
+        status: item.status,
+        seasons: item.number_of_seasons,
+        totalEpisodes: item.number_of_episodes
+      };
     } else if (type === 'anime') {
       return this.anime.getDetails(id);
     } else if (type === 'manga') {
@@ -318,13 +396,18 @@ const api = {
     return null;
   },
 
-  // Add missing functions needed by videoplayer.html
   async getStreamUrl(id, type, episode) {
     // For demo purposes
     if (type === 'movie' || type === 'movies') {
       const sources = await this.movies.getStreamingSources(id);
       return {
         url: sources.sources[0].url,
+        type: 'video'
+      };
+    } else if (type === 'tv') {
+      // Add specific TV show streaming
+      return {
+        url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
         type: 'video'
       };
     } else if (type === 'anime') {
@@ -401,9 +484,10 @@ const api = {
   player: {
     initVideoPlayer(videoElement) {
       return new Plyr(videoElement, {
-        controls: ['play', 'progress', 'volume', 'fullscreen']
+        controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen']
       });
     },
+    
     setVideoSource(player, sources, subtitles = []) {
       if (!sources || sources.length === 0) return;
       
@@ -427,6 +511,7 @@ const api = {
         tracks: trackConfig
       };
     },
+    
     initMangaReader(container) {
       return {
         loadPages(pagesData) {
@@ -448,6 +533,89 @@ const api = {
         }
       };
     }
+  },
+  
+  // Helper function to render episode list in UI
+  renderEpisodesList(container, episodes, mediaId, mediaType, onEpisodeClick) {
+    if (!container) return;
+    
+    // Clear container
+    container.innerHTML = '';
+    
+    // Create episodes list
+    if (!episodes || episodes.length === 0) {
+      container.innerHTML = '<div class="no-episodes">No episodes available for this content.</div>';
+      return;
+    }
+    
+    // Create list container
+    const episodesList = document.createElement('div');
+    episodesList.className = 'episodes-list';
+    
+    // Add each episode
+    episodes.forEach(episode => {
+      const episodeItem = document.createElement('div');
+      episodeItem.className = 'episode-item';
+      episodeItem.dataset.id = episode.id;
+      episodeItem.dataset.number = episode.number;
+      
+      // Create thumbnail if available
+      if (episode.still) {
+        const thumbnail = document.createElement('div');
+        thumbnail.className = 'episode-thumbnail';
+        const img = document.createElement('img');
+        img.src = episode.still;
+        img.alt = `Episode ${episode.number}`;
+        thumbnail.appendChild(img);
+        episodeItem.appendChild(thumbnail);
+      }
+      
+      // Episode info
+      const info = document.createElement('div');
+      info.className = 'episode-info';
+      
+      const title = document.createElement('h3');
+      title.className = 'episode-title';
+      title.textContent = episode.title;
+      
+      const details = document.createElement('div');
+      details.className = 'episode-details';
+      details.innerHTML = `
+        <span class="episode-number">Episode ${episode.number}</span>
+        ${episode.season ? `<span class="episode-season">Season ${episode.season}</span>` : ''}
+        <span class="episode-duration">${episode.duration}</span>
+      `;
+      
+      const description = document.createElement('p');
+      description.className = 'episode-description';
+      description.textContent = episode.description || 'No description available.';
+      
+      info.appendChild(title);
+      info.appendChild(details);
+      info.appendChild(description);
+      
+      episodeItem.appendChild(info);
+      
+      // Play button
+      const playBtn = document.createElement('button');
+      playBtn.className = 'episode-play-btn';
+      playBtn.innerHTML = '<i class="fas fa-play"></i>';
+      episodeItem.appendChild(playBtn);
+      
+      // Add click event
+      episodeItem.addEventListener('click', () => {
+        if (typeof onEpisodeClick === 'function') {
+          onEpisodeClick(episode, mediaId, mediaType);
+        } else {
+          // Default action - redirect to video player
+          window.location.href = `videoplayer.html?id=${mediaId}&type=${mediaType}&episode=${episode.id}`;
+        }
+      });
+      
+      episodesList.appendChild(episodeItem);
+    });
+    
+    container.appendChild(episodesList);
   }
 };
 
